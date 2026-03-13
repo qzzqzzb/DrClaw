@@ -24,7 +24,7 @@ die()     { printf '%s[error]%s %s\n'   "$RED"    "$RESET" "$*" >&2; exit 1; }
 # --- Config ------------------------------------------------------------
 DRCLAW_DIR="${DRCLAW_DIR:-$HOME/.drclaw-src}"
 SYMLINK_DIR="$HOME/.local/bin"
-REPO_URL="https://github.com/ZihaoFU245/drclaw.git"
+REPO_URL="https://github.com/qzzqzzb/drclaw.git"
 MIN_PYTHON="3.10"
 
 # --- Pre-flight --------------------------------------------------------
