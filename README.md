@@ -35,15 +35,16 @@
 bash <(curl -fsSL https://raw.githubusercontent.com/qzzqzzb/drclaw/main/install.sh)
 ```
 
-安装完成后，[配置 LLM API](#configuration)以启动。
+安装完成后，[配置 LLM API](#配置)以启动。
 
 ## 目录
 
-- [InternClaw是什么](#drclaw是什么)
+- [InternClaw是什么](#internclaw-你的全自动赛博科研流水线)
 - [快速上手](#快速上手)
 - [项目结构](#项目结构)
 - [特点](#特点)
 - [配置](#配置)
+- [测试中功能](#测试中功能)
 - [使用](#使用)
 - [Roadmap / Todo](#roadmap--todo)
 - [测试](#测试)
@@ -232,7 +233,7 @@ InternClaw是什么？
 - **macOS 任务栏进程**: 任务栏图标管理InternClaw守护进程
 - **更多前端支持正在开发中**
 
-更多[测试中功能](#Beta).
+更多[测试中功能](#测试中功能).
 
 ## 配置
 
