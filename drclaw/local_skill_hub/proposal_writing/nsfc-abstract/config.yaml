@@ -1,0 +1,45 @@
+skill_info:
+  name: nsfc-abstract
+  version: 2.1.2
+  description: NSFC 标书中英文摘要生成（英文为中文的忠实翻译）与长度校验
+  author: "Bensz Conan"
+  category: writing
+
+limits:
+  zh_max_chars: 400
+  en_max_chars: 4000
+  content_points_min: 3
+  content_points_max: 4
+  zh_recommended_sentences: 5
+
+format:
+  # 用于脚本与示例的分段标记；不要求用户在最终标书里保留这些标记
+  zh_begin: "[ZH]"
+  zh_end: "[/ZH]"
+  en_begin: "[EN]"
+  en_end: "[/EN]"
+  field_begin: "[FIELD]"
+  field_end: "[/FIELD]"
+
+output:
+  filename: "NSFC-ABSTRACTS.md"
+  zh_heading: "# 中文摘要"
+  en_heading: "# English Abstract"
+  field_heading: "# 主要研究领域"
+
+title:
+  # Whether title suggestions are required in the final output.
+  title_required: true
+  # Default number of title candidates to provide (in addition to the recommended title line).
+  title_candidates_default: 5
+  # Optional marker-format for machine parsing.
+  title_begin: "[TITLE]"
+  title_end: "[/TITLE]"
+  # Markdown heading for the title section in NSFC-ABSTRACTS.md
+  title_heading: "# 标题建议"
+
+field:
+  # Whether "主要研究领域" is required in the final output.
+  field_required: true
+  # Max Chinese characters (汉字) for the field sentence; 0 = no limit.
+  field_max_chars: 25

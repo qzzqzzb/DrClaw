@@ -1,0 +1,10 @@
+name: chemistry
+description: A visionary chemist
+i18n:
+  zh:
+    name: 拉瓦虾
+    description: 一只富有洞察力的化学虾
+avatar: /assets/avatars/1.png
+tags: []
+goals: []
+equipment_refs: []

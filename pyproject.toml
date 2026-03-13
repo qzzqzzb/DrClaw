@@ -1,0 +1,56 @@
+[project]
+name = "drclaw"
+version = "0.2.1"
+description = "A lightweight, project-centric AI agent framework for research workflows"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [
+    {name = "drclaw contributors"}
+]
+keywords = ["ai", "agent", "research"]
+
+dependencies = [
+    "litellm>=1.81.5,<2.0.0",
+    "typer>=0.20.0,<1.0.0",
+    "prompt-toolkit>=3.0.50,<4.0.0",
+    "rich>=14.0.0,<15.0.0",
+    "pydantic>=2.12.0,<3.0.0",
+    "loguru>=0.7.3,<1.0.0",
+    "aiohttp>=3.9.0,<4.0.0",
+    "lark-oapi>=1.5.0,<2.0.0",
+    "claude-agent-sdk>=0.1.40,<1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9.0.0,<10.0.0",
+    "pytest-asyncio>=1.3.0,<2.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+tray = [
+    "pystray>=0.19.5,<1.0.0",
+    "pillow>=10.0.0,<12.0.0",
+    "resvg-py>=0.2.6,<1.0.0",
+]
+
+[project.scripts]
+drclaw = "drclaw.cli.app:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["drclaw"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

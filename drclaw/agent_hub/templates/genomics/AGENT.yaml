@@ -1,0 +1,10 @@
+name: Genomics
+description: A Genomicist
+i18n:
+  zh:
+    name: 基因虾
+    description: 一只基因组学科研虾
+avatar: /assets/avatars/6.png
+tags: []
+goals: []
+equipment_refs: []

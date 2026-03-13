@@ -1,0 +1,10 @@
+name: Pharmacy
+description: A Pharmaceutical Scientist
+i18n:
+  zh:
+    name: 我不是药虾
+    description: 一只药学科研虾
+avatar: /assets/avatars/5.png
+tags: []
+goals: []
+equipment_refs: []

@@ -1,0 +1,97 @@
+# ================================
+# nsfc-qc 默认配置（Single Source of Truth for version）
+# ================================
+
+skill_info:
+  name: nsfc-qc
+  version: 1.2.0
+  description: “NSFC 标书质量控制（只读）：多线程检查文风生硬/引用真伪与一致性/篇幅与结构分布/逻辑清晰度等，输出标准化 QC 报告；缩写预检基于 main.tex 实际渲染顺序与全文级注册表检查定义滞后/冲突定义/重复同一定义；元数据获取为必选项；支持”交付目录 + 隐藏工作区（.nsfc-qc/）”隔离中间产物（默认不污染标书根目录）”
+  category: writing
+  author: “Bensz Conan”
+
+parameters:
+  project_root:
+    type: string
+    required: true
+    description: 标书项目根目录（如 projects/NSFC_Young 或你的标书目录）
+  main_tex:
+    type: string
+    required: false
+    default: main.tex
+    description: 主入口 tex 文件名（相对 project_root），默认 main.tex
+  threads:
+    type: integer
+    required: false
+    default: 5
+    description: parallel-vibe 线程数（默认 5，范围 1-9）
+  execution:
+    type: string
+    required: false
+    default: serial
+    allowed_values: [serial, parallel]
+    description: parallel-vibe 执行模式；默认 serial（串联），仅在用户明确要求并行时使用 parallel
+  runner_type:
+    type: string
+    required: false
+    default: codex
+    allowed_values: [codex, claude]
+    description: parallel-vibe runner.type（默认 codex；环境支持 claude 时可切换）
+  runner_profile:
+    type: string
+    required: false
+    default: deep
+    allowed_values: [fast, default, deep]
+    description: parallel-vibe runner.profile（默认 deep）
+  deliver_dir:
+    type: string
+    required: false
+    default: ""
+    description: 交付目录（面向人读）。为空则默认 `project_root/QC/{run_id}/`
+  workspace_dir:
+    type: string
+    required: false
+    default: ""
+    description: 工作区目录（中间产物 + 可复现）。为空则默认 `{deliver_dir}/.nsfc-qc/`
+  runs_root:
+    type: string
+    required: false
+    default: .nsfc-qc/runs
+    description: 运行目录根：未启用 workspace_dir 时相对 project_root（默认 .nsfc-qc/runs）；启用 workspace_dir 时相对 workspace_dir（建议 runs）
+  max_concurrent:
+    type: integer
+    required: false
+    default: 5
+    description: 元数据获取时的最大并发请求数（默认 5，范围 1-10）；用于避免 API 速率限制和 IP 封锁
+  unpaywall_email:
+    type: string
+    required: false
+    default: ""
+    description: Unpaywall API 所需的邮箱（可选，或通过环境变量 UNPAYWALL_EMAIL 设置）
+  fetch_pdf:
+    type: boolean
+    required: false
+    default: false
+    description: 是否尝试下载 OA PDF 并提取文本片段（默认 false）
+  timeout_s:
+    type: integer
+    required: false
+    default: 20
+    description: 网络请求超时时间（秒，默认 20）
+
+guardrails:
+  # 只读：不允许修改标书内容（tex/bib 等）。所有写入必须在 .nsfc-qc/ 下。
+  allowed_write_globs:
+    - ".nsfc-qc/**"
+    - "QC/**"
+    - "**/*.nsfc-qc/**"
+  forbidden_write_globs:
+    - "**/*.tex"
+    - "**/*.bib"
+    - "**/*.cls"
+    - "**/*.sty"
+
+output_contract:
+  # 标准输出（run_id 由脚本生成；run_dir 由 legacy 或 workspace 模式决定）
+  final_report: "{run_dir}/final/nsfc-qc_report.md"
+  final_metrics: "{run_dir}/final/nsfc-qc_metrics.json"
+  final_findings: "{run_dir}/final/nsfc-qc_findings.json"

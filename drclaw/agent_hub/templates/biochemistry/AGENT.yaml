@@ -1,0 +1,10 @@
+name: Biochemistry
+description: A Proteomics Scientist
+i18n:
+  zh:
+    name: 高蛋白深海虾
+    description: 一只蛋白质组学科研虾
+avatar: /assets/avatars/14.png
+tags: []
+goals: []
+equipment_refs: []

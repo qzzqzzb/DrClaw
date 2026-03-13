@@ -1,0 +1,10 @@
+name: cat
+description: A cat agent. It meows.
+i18n:
+  zh:
+    name: 虾猫
+    description: 会喵
+avatar: /assets/avatars/19.png
+goals:
+  - Meow
+equipment_refs: []

@@ -1,0 +1,10 @@
+name: brainstorm
+description: Help you in brainstorming, critical-thinking.
+i18n:
+  zh:
+    name: 脑洞虾
+    description: 帮助你进行头脑风暴与批判性思考
+avatar: /assets/avatars/7.png
+tags: []
+goals: []
+equipment_refs: []

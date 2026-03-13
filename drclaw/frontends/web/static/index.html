@@ -1,0 +1,4346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DrClaw</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  height: 100vh;
+  display: flex;
+  background: #fafafa;
+}
+
+#sidebar {
+  width: 250px;
+  min-width: 250px;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #313244;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  font-size: 18px;
+  color: #89b4fa;
+  border-bottom: 1px solid #313244;
+  font-weight: 700;
+}
+
+.brand img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+#nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+}
+
+.sidebar-bottom {
+  margin-top: auto;
+  padding: 10px;
+  border-top: 1px solid #313244;
+}
+
+.nav-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #cdd6f4;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.nav-item:hover { background: #313244; }
+
+.nav-item.active {
+  background: #45475a;
+  color: #ffffff;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+}
+
+.settings-nav-item img {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.lang-switch {
+  display: flex;
+  width: 100%;
+  border: 1px solid #45475a;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #1e1e2e;
+  margin-bottom: 8px;
+}
+
+.lang-switch-part {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: #cdd6f4;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lang-switch-part + .lang-switch-part {
+  border-left: 1px solid #45475a;
+}
+
+.lang-switch-part:hover {
+  background: #313244;
+}
+
+.lang-switch-part.active {
+  background: #89b4fa;
+  color: #1e1e2e;
+}
+
+#main {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+}
+
+.view {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
+
+.view.active { display: flex; }
+
+/* Generic page */
+.page {
+  flex-direction: column;
+  background: #fafafa;
+}
+
+.page-header {
+  padding: 14px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid #e0e0e0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.page-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+
+.empty-page {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 15px;
+}
+
+/* Statistics page */
+.statistics-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.statistics-status {
+  min-height: 20px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.statistics-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.statistics-table th,
+.statistics-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  vertical-align: top;
+}
+
+.statistics-table th {
+  background: #f8fafc;
+  color: #1f2937;
+  font-size: 13px;
+}
+
+.statistics-table td {
+  color: #111827;
+  font-size: 13px;
+}
+
+.statistics-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.statistics-agent-name {
+  font-weight: 600;
+}
+
+.statistics-agent-id {
+  margin-top: 2px;
+  font-size: 11px;
+  color: #6b7280;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.statistics-consumption-line {
+  display: block;
+}
+
+/* Config page */
+.config-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.config-btn {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.config-btn.primary {
+  background: #89b4fa;
+  border-color: #89b4fa;
+  color: #1e1e2e;
+}
+
+.config-btn:hover {
+  border-color: #93c5fd;
+}
+
+.config-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.config-status {
+  min-height: 20px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.config-status.info {
+  color: #1d4ed8;
+}
+
+.config-status.success {
+  color: #166534;
+}
+
+.config-status.error {
+  color: #b91c1c;
+}
+
+.config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.config-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 12px;
+  min-width: 0;
+}
+
+.config-card legend {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  padding: 0 4px;
+}
+
+.config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.config-field:last-child {
+  margin-bottom: 0;
+}
+
+.config-field label {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.config-field input,
+.config-field textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1f2937;
+  background: #ffffff;
+}
+
+.config-field textarea {
+  resize: vertical;
+  min-height: 72px;
+}
+
+.config-field textarea.code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.config-field input:focus,
+.config-field textarea:focus {
+  outline: none;
+  border-color: #93c5fd;
+}
+
+.config-note {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.config-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.config-checkbox input {
+  width: auto;
+}
+
+@media (max-width: 1000px) {
+  .config-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Skills page */
+.skills-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+}
+
+.skills-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.skills-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.skills-upload-btn {
+  border: 1px dashed #93c5fd;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.skills-upload-btn:hover {
+  border-color: #60a5fa;
+}
+
+.skills-status {
+  min-height: 20px;
+  font-size: 13px;
+}
+
+.skills-status.info { color: #1d4ed8; }
+.skills-status.success { color: #166534; }
+.skills-status.error { color: #b91c1c; }
+
+.skills-stats {
+  margin-left: auto;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  overflow: auto;
+  flex: 1;
+  align-content: start;
+}
+
+.skills-divider {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.skills-divider::before,
+.skills-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid #e5e7eb;
+}
+
+.skill-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 16px;
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.skill-card:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.skill-card-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.skill-card-desc {
+  font-size: 12px;
+  color: #4b5563;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 10px;
+  min-height: 34px;
+}
+
+.skill-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.skill-card-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.skill-card-badge.global { background: #d1fae5; color: #065f46; }
+.skill-card-badge.hub { background: #fce7f3; color: #9d174d; }
+.skill-card-badge.agent { background: #ede9fe; color: #5b21b6; }
+
+.skills-tags-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tag-chip {
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+  background: #ffffff;
+  color: #374151;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.tag-chip:hover {
+  border-color: #93c5fd;
+}
+
+.tag-chip.active {
+  background: #dbeafe;
+  border-color: #60a5fa;
+  color: #1e40af;
+}
+
+.skill-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.skill-card-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 10px;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Skill detail modal */
+.skill-modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.skill-modal-overlay.visible {
+  display: flex;
+}
+
+.skill-modal {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 680px;
+  max-width: 90vw;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+}
+
+.skill-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.skill-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.skill-modal-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.skill-modal-close {
+  border: 0;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.skill-modal-close:hover {
+  background: #f3f4f6;
+}
+
+.skill-modal-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 20px;
+}
+
+.skill-modal-usage {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.skill-modal-markdown {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+@media (max-width: 1200px) {
+  .skills-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 900px) {
+  .skills-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .skills-grid { grid-template-columns: 1fr; }
+}
+
+/* My Team page */
+.team-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#team-workspace {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+}
+
+#team-chat-panel {
+  width: 33.333%;
+  min-width: 280px;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #e5e7eb;
+  background: #fafafa;
+}
+
+#team-chat-header {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 8px;
+  height: 96px;
+  padding: 6px 14px;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  user-select: none;
+}
+
+#office-area {
+  flex: 1;
+  overflow: auto;
+  padding: 20px;
+  background: #eef3f9 url("/assets/office_back.png") center / cover no-repeat;
+  position: relative;
+}
+
+.msg-trail {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  pointer-events: none;
+  z-index: 100;
+  filter: drop-shadow(0 2px 8px rgba(240, 162, 33, 0.5))
+          drop-shadow(0 0 12px rgba(241, 200, 76, 0.35));
+}
+
+#agents-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  justify-content: center;
+  padding-top: 200px;
+}
+
+.desk-card {
+  width: 200px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  padding: 0;
+  background: transparent;
+  transition: border-color 0.12s, box-shadow 0.12s;
+  position: relative;
+  overflow: hidden;
+}
+
+.desk-card::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 14px;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.desk-card:hover {
+  border-color: #89b4fa;
+  box-shadow: 0 3px 9px rgba(30, 30, 46, 0.11);
+}
+
+.desk-card.selected {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.desk-card.node-glow-idle::after {
+  opacity: 1;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.18), 0 0 12px rgba(34, 197, 94, 0.28);
+  animation: node-breathe-idle 2.4s ease-in-out infinite;
+}
+
+.desk-card.node-glow-working::after {
+  opacity: 1;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2), 0 0 14px rgba(249, 115, 22, 0.35);
+  animation: node-breathe-working 1.35s ease-in-out infinite;
+}
+
+.desk-card.node-glow-error::after {
+  opacity: 1;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.28), 0 0 14px rgba(239, 68, 68, 0.34);
+}
+
+@keyframes node-breathe-idle {
+  0%, 100% { transform: scale(0.98); opacity: 0.55; }
+  50% { transform: scale(1.03); opacity: 0.98; }
+}
+
+@keyframes node-breathe-working {
+  0%, 100% { transform: scale(0.96); opacity: 0.62; }
+  50% { transform: scale(1.07); opacity: 1; }
+}
+
+.desk-agent-info {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.desk-avatar {
+  width: 70px;
+  height: 70px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 2px solid #ffffff;
+  background: #f3f4f6;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transform: rotate(0deg);
+  transform-origin: 50% 50%;
+  transition: transform 0.2s linear;
+}
+
+.desk-card.node-glow-working .desk-avatar {
+  animation: avatar-rotate 2.1s linear infinite;
+}
+
+@keyframes avatar-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.desk-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e1e2e;
+  text-align: left;
+  white-space: nowrap;
+  text-shadow: 0 0 3px rgba(255, 255, 255, 0.6);
+}
+
+.desk-img {
+  width: 100%;
+  display: block;
+  border-radius: 10px;
+}
+
+/* Agent Hub page */
+#hub-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.hub-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  min-height: 140px;
+  text-align: left;
+}
+
+.hub-card:hover {
+  border-color: #89b4fa;
+  box-shadow: 0 2px 8px rgba(30, 30, 46, 0.08);
+}
+
+.hub-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hub-card-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+.hub-card-name {
+  font-size: 17px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.hub-card-desc {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.hub-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hub-card-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.hub-card-tag {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.hub-section-label {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  font-weight: 700;
+  color: #4b5563;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hub-divider {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.hub-divider::before,
+.hub-divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid #e5e7eb;
+}
+
+.hub-activate-btn {
+  font-size: 12px;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: #89b4fa;
+  color: #1e1e2e;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hub-activate-btn:hover { background: #74c7ec; }
+
+.hub-activate-btn.activated {
+  background: #d1fae5;
+  color: #065f46;
+  cursor: default;
+}
+
+.hub-origin-badge {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: #dbeafe;
+  color: #1e40af;
+  margin-left: 6px;
+}
+
+.hub-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.hub-modal-overlay.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.hub-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 90%;
+  max-width: 640px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+}
+
+.hub-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.hub-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.hub-modal-desc {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.hub-modal-close {
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+  color: #6b7280;
+  line-height: 1;
+}
+
+.hub-modal-close:hover { color: #111827; }
+
+.hub-modal-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 20px;
+}
+
+.hub-modal-section {
+  margin-bottom: 14px;
+}
+
+.hub-modal-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hub-modal-section pre {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 240px;
+  overflow: auto;
+  color: #374151;
+}
+
+.hub-modal-section ul {
+  list-style: disc;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.hub-modal-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.hub-modal-activate {
+  padding: 8px 20px;
+  border: 0;
+  border-radius: 8px;
+  background: #89b4fa;
+  color: #1e1e2e;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.hub-modal-activate:hover { background: #74c7ec; }
+
+.hub-modal-activate:disabled {
+  background: #d1fae5;
+  color: #065f46;
+  cursor: default;
+}
+
+@media (max-width: 1200px) {
+  #hub-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  #hub-grid { grid-template-columns: 1fr; }
+}
+
+/* Monitor top bar */
+.monitor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#monitor-summary {
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.monitor-toolbar-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-agent-menu-wrap {
+  position: relative;
+}
+
+#add-agent-btn {
+  font-size: 12px;
+  padding: 4px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1f2937;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#add-agent-btn:hover {
+  border-color: #89b4fa;
+  background: #eff6ff;
+}
+
+#add-agent-btn[aria-expanded="true"] {
+  border-color: #89b4fa;
+  background: #eff6ff;
+}
+
+#add-agent-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.14);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10;
+}
+
+#add-agent-menu[hidden] {
+  display: none;
+}
+
+.add-agent-menu-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 13px;
+  color: #1f2937;
+  cursor: pointer;
+}
+
+.add-agent-menu-item:hover {
+  background: #f3f4f6;
+}
+
+.monitor-status {
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.monitor-status.live {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.monitor-status.connecting {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.monitor-status.down {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Chat panel header label */
+
+#chat-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+}
+
+#chat-header-avatar-wrap {
+  height: 90%;
+  aspect-ratio: 1 / 1;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  background: #f3f4f6;
+  flex-shrink: 0;
+}
+
+#chat-header-avatar {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+#chat-header-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.floating-chat-publish {
+  border: 1px solid #93c5fd;
+  background: #eff6ff;
+  color: #1d4ed8;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.floating-chat-publish:hover {
+  background: #dbeafe;
+}
+
+.floating-chat-publish[hidden] {
+  display: none;
+}
+
+.floating-chat-publish:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.msg {
+  max-width: 84%;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.msg.user {
+  align-self: flex-end;
+  background: #89b4fa;
+  color: #1e1e2e;
+}
+
+.msg.agent {
+  align-self: flex-start;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+}
+
+.msg.error {
+  align-self: center;
+  background: #f38ba8;
+  color: #1e1e2e;
+  font-size: 12px;
+}
+
+.msg.routed {
+  align-self: center;
+  background: #f5e0dc;
+  color: #585b70;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.msg-files {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.msg-file {
+  color: #1d4ed8;
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.msg-file:hover {
+  text-decoration: underline;
+}
+
+#input-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border-top: 1px solid #e0e0e0;
+}
+
+#chat-file-pending {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chat-file-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e0f2fe;
+  color: #0c4a6e;
+  font-size: 12px;
+}
+
+.chat-file-chip button {
+  margin: 0;
+  border: 0;
+  background: transparent;
+  color: #0c4a6e;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+  line-height: 1;
+}
+
+#chat-input-row {
+  display: flex;
+  align-items: center;
+}
+
+#chat-input-row input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+}
+
+#chat-input-row input:focus { border-color: #89b4fa; }
+
+#chat-input-row button {
+  margin-left: 8px;
+  padding: 9px 14px;
+  background: #89b4fa;
+  color: #1e1e2e;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+#chat-input-row button:hover { background: #74c7ec; }
+#chat-input-row button:disabled { opacity: 0.5; cursor: default; }
+
+#chat-file-btn {
+  width: 36px;
+  min-width: 36px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+#chat-empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 12px;
+}
+
+
+.publish-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 980;
+  padding: 16px;
+}
+
+.publish-modal-overlay.visible {
+  display: flex;
+}
+
+.publish-modal {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.26);
+}
+
+.publish-modal-header {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.publish-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.publish-modal-close {
+  border: 0;
+  background: transparent;
+  color: #6b7280;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.publish-modal-close:hover {
+  color: #111827;
+  background: #f3f4f6;
+}
+
+.publish-modal-body {
+  padding: 14px 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.publish-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.publish-field label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.publish-field input,
+.publish-field textarea {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #111827;
+  resize: vertical;
+}
+
+.publish-field input:focus,
+.publish-field textarea:focus {
+  border-color: #60a5fa;
+  outline: none;
+}
+
+.publish-skills-card {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  padding: 8px 10px;
+  min-height: 72px;
+}
+
+.publish-skills-empty {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.publish-skills-list {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.publish-skills-list li {
+  font-size: 12px;
+  color: #374151;
+}
+
+.publish-skill-source {
+  color: #6b7280;
+}
+
+.publish-modal-footer {
+  padding: 10px 16px 14px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.publish-modal-btn {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.publish-modal-btn:hover {
+  background: #f9fafb;
+}
+
+.publish-modal-btn.primary {
+  background: #89b4fa;
+  border-color: #74c7ec;
+  color: #1e1e2e;
+}
+
+.publish-modal-btn.primary:hover {
+  background: #74c7ec;
+}
+
+.publish-modal-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+@media (max-width: 900px) {
+  #team-workspace {
+    flex-direction: column;
+  }
+
+  #team-chat-panel {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    max-height: 45vh;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+}
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <div class="brand"><span>DrClaw</span></div>
+  <div id="nav">
+    <button id="nav-my-team" class="nav-item" data-route="#/agents" data-i18n="nav_my_team">My Lab</button>
+    <button id="nav-agent-hub" class="nav-item" data-route="#/agent-hub" data-i18n="nav_agent_hub">Agent Store</button>
+    <button id="nav-skills" class="nav-item" data-route="#/skills" data-i18n="nav_skills">Skills Store</button>
+    <button id="nav-statistics" class="nav-item" data-route="#/statistics" data-i18n="nav_statistics">Statistics</button>
+  </div>
+  <div class="sidebar-bottom">
+    <div id="lang-switch" class="lang-switch" aria-label="Language switch">
+      <button id="lang-switch-zh" class="lang-switch-part" type="button" data-lang="zh">中</button>
+      <button id="lang-switch-en" class="lang-switch-part" type="button" data-lang="en">En</button>
+    </div>
+    <button
+      class="nav-item settings-nav-item"
+      data-route="#/config"
+      aria-label="Config"
+      title="Config"
+      data-i18n-title="nav_config"
+      data-i18n-aria-label="nav_config"
+    >
+      <img src="/assets/gear.png" alt="Config">
+    </button>
+  </div>
+</div>
+
+<div id="main">
+  <section id="agents-view" class="view page">
+    <div id="header-my-team" class="page-header" data-i18n="header_my_team">My Lab</div>
+    <div class="page-body team-body">
+      <div class="monitor-toolbar">
+        <div id="monitor-summary">Agents: 0 · Events: 0</div>
+        <div class="monitor-toolbar-actions">
+          <div class="add-agent-menu-wrap">
+            <button id="add-agent-btn" type="button" aria-haspopup="menu" aria-expanded="false" data-i18n="add_agent">Add Agent</button>
+            <div id="add-agent-menu" role="menu" hidden>
+              <button id="add-agent-from-scratch" class="add-agent-menu-item" type="button" role="menuitem" data-i18n="add_agent_from_scratch">From scratch</button>
+              <button id="add-agent-import-hub" class="add-agent-menu-item" type="button" role="menuitem" data-i18n="add_agent_import_hub">Import from agent store</button>
+            </div>
+          </div>
+          <div id="monitor-status" class="monitor-status down">WS: disconnected</div>
+        </div>
+      </div>
+      <div id="team-workspace">
+        <div id="team-chat-panel">
+          <div id="team-chat-header">
+            <div id="chat-header"></div>
+            <div class="floating-chat-actions">
+              <button id="floating-chat-publish" class="floating-chat-publish" type="button" data-i18n="publish" hidden>Publish</button>
+            </div>
+          </div>
+          <div id="chat-empty" style="display:flex">Select an agent to start chatting</div>
+          <div id="messages"></div>
+          <div id="input-bar">
+            <div id="chat-file-pending"></div>
+            <div id="chat-input-row">
+              <button id="chat-file-btn" type="button" title="Attach files" data-i18n-title="attach_file" disabled>+</button>
+              <input id="chat-file-input" type="file" multiple style="display:none">
+              <input id="msg-input" type="text" placeholder="Type a message..." data-i18n-placeholder="type_message" disabled>
+              <button id="send-btn" data-i18n="send" disabled>Send</button>
+            </div>
+          </div>
+        </div>
+        <div id="office-area">
+          <div id="agents-grid"></div>
+          <div id="agents-empty" class="empty-page" style="display:none">No agents found</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="agent-hub-view" class="view page">
+    <div id="header-agent-hub" class="page-header" data-i18n="header_agent_hub">Agent Store</div>
+    <div class="page-body">
+      <div id="hub-grid"></div>
+      <div id="hub-empty" class="empty-page" style="display:none">No templates available</div>
+    </div>
+  </section>
+
+  <div id="hub-modal-overlay" class="hub-modal-overlay">
+    <div class="hub-modal">
+      <div class="hub-modal-header">
+        <div>
+          <div id="hub-modal-title" class="hub-modal-title"></div>
+          <div id="hub-modal-desc" class="hub-modal-desc"></div>
+        </div>
+        <button id="hub-modal-close" class="hub-modal-close" type="button">&times;</button>
+      </div>
+      <div id="hub-modal-body" class="hub-modal-body"></div>
+      <div class="hub-modal-footer">
+        <button id="hub-modal-activate" class="hub-modal-activate" type="button" data-i18n="activate">Activate</button>
+      </div>
+    </div>
+  </div>
+
+  <section id="config-view" class="view page">
+    <div id="header-config" class="page-header" data-i18n="header_config">Config</div>
+    <div class="page-body">
+      <div class="config-toolbar">
+        <button id="config-reload-btn" class="config-btn" type="button" data-i18n="reload">Reload</button>
+        <button id="config-save-btn" class="config-btn primary" type="button" data-i18n="save">Save</button>
+      </div>
+      <div id="config-status" class="config-status" aria-live="polite"></div>
+      <form id="config-form" class="config-form">
+        <div class="config-grid">
+          <fieldset class="config-card">
+            <legend>Provider</legend>
+            <div class="config-field">
+              <label for="cfg-provider-api-key">API Key</label>
+              <input id="cfg-provider-api-key" type="text">
+            </div>
+            <div class="config-field">
+              <label for="cfg-provider-api-base">API Base</label>
+              <input id="cfg-provider-api-base" type="text" placeholder="Optional">
+            </div>
+            <div class="config-field">
+              <label for="cfg-provider-model">Model</label>
+              <input id="cfg-provider-model" type="text">
+            </div>
+          </fieldset>
+
+          <fieldset class="config-card">
+            <legend>Agent</legend>
+            <div class="config-field">
+              <label for="cfg-agent-max-iterations">Max Iterations</label>
+              <input id="cfg-agent-max-iterations" type="number" min="1">
+            </div>
+            <div class="config-field">
+              <label for="cfg-agent-max-tokens">Max Tokens</label>
+              <input id="cfg-agent-max-tokens" type="number" min="1">
+            </div>
+            <div class="config-field">
+              <label for="cfg-agent-temperature">Temperature</label>
+              <input id="cfg-agent-temperature" type="number" step="0.01">
+            </div>
+            <div class="config-field">
+              <label for="cfg-agent-memory-window">Memory Window</label>
+              <input id="cfg-agent-memory-window" type="number" min="1">
+            </div>
+            <div class="config-field">
+              <label for="cfg-agent-max-history">Max History</label>
+              <input id="cfg-agent-max-history" type="number" min="1" placeholder="Leave empty for null">
+            </div>
+          </fieldset>
+
+          <fieldset class="config-card">
+            <legend>Core & Daemon</legend>
+            <div class="config-field">
+              <label for="cfg-data-dir">Data Dir</label>
+              <input id="cfg-data-dir" type="text">
+            </div>
+            <div class="config-field">
+              <label for="cfg-daemon-frontends">Daemon Frontends (comma-separated)</label>
+              <input id="cfg-daemon-frontends" type="text" placeholder="web,feishu">
+            </div>
+            <div class="config-field config-checkbox">
+              <input id="cfg-daemon-show-tool-calls" type="checkbox">
+              <label for="cfg-daemon-show-tool-calls">Show tool calls</label>
+            </div>
+            <div class="config-field config-checkbox">
+              <input id="cfg-daemon-verbose-chat" type="checkbox">
+              <label for="cfg-daemon-verbose-chat">Verbose chat mode (show routed/internal details)</label>
+            </div>
+          </fieldset>
+
+          <fieldset class="config-card">
+            <legend>Tray</legend>
+            <div class="config-field">
+              <label for="cfg-tray-control-panel-url">Control Panel URL</label>
+              <input id="cfg-tray-control-panel-url" type="text">
+            </div>
+            <div class="config-field">
+              <label for="cfg-tray-icon-path">Icon Path</label>
+              <input id="cfg-tray-icon-path" type="text">
+            </div>
+            <div class="config-field">
+              <label for="cfg-tray-daemon-program">Daemon Program (one arg per line)</label>
+              <textarea id="cfg-tray-daemon-program"></textarea>
+            </div>
+            <div class="config-field">
+              <label for="cfg-tray-daemon-env">Daemon Env (read-only)</label>
+              <textarea id="cfg-tray-daemon-env" class="code" readonly></textarea>
+            </div>
+            <div class="config-field">
+              <label for="cfg-tray-daemon-cwd">Daemon CWD</label>
+              <input id="cfg-tray-daemon-cwd" type="text">
+            </div>
+            <div class="config-field">
+              <label for="cfg-tray-shutdown-timeout-seconds">Shutdown Timeout (seconds)</label>
+              <input id="cfg-tray-shutdown-timeout-seconds" type="number" min="1">
+            </div>
+          </fieldset>
+
+          <fieldset class="config-card">
+            <legend>Feishu</legend>
+            <div class="config-field">
+              <label for="cfg-feishu-app-id">App ID</label>
+              <input id="cfg-feishu-app-id" type="text">
+            </div>
+            <div class="config-field">
+              <label for="cfg-feishu-app-secret">App Secret</label>
+              <input id="cfg-feishu-app-secret" type="text">
+            </div>
+            <div class="config-field">
+              <label for="cfg-feishu-encrypt-key">Encrypt Key</label>
+              <input id="cfg-feishu-encrypt-key" type="text">
+            </div>
+            <div class="config-field">
+              <label for="cfg-feishu-verification-token">Verification Token</label>
+              <input id="cfg-feishu-verification-token" type="text">
+            </div>
+            <div class="config-field">
+              <label for="cfg-feishu-allow-from">Allow From (comma-separated)</label>
+              <input id="cfg-feishu-allow-from" type="text">
+            </div>
+            <div class="config-field">
+              <label for="cfg-feishu-reconnect-interval-seconds">Reconnect Interval (seconds)</label>
+              <input id="cfg-feishu-reconnect-interval-seconds" type="number" min="1">
+            </div>
+          </fieldset>
+
+          <fieldset class="config-card">
+            <legend>Tools / Serper</legend>
+            <div class="config-field">
+              <label for="cfg-serper-api-key">API Key</label>
+              <input id="cfg-serper-api-key" type="text">
+            </div>
+            <div class="config-field">
+              <label for="cfg-serper-endpoint">Endpoint</label>
+              <input id="cfg-serper-endpoint" type="text">
+            </div>
+            <div class="config-field">
+              <label for="cfg-serper-max-results">Max Results</label>
+              <input id="cfg-serper-max-results" type="number" min="1" max="10">
+            </div>
+          </fieldset>
+
+          <fieldset class="config-card">
+            <legend>Environment (read-only)</legend>
+            <div class="config-field">
+              <label for="cfg-env-global">global</label>
+              <textarea id="cfg-env-global" class="code" readonly></textarea>
+            </div>
+            <div class="config-field">
+              <label for="cfg-env-scoped">scoped</label>
+              <textarea id="cfg-env-scoped" class="code" readonly></textarea>
+            </div>
+            <div class="config-note">Environment scope editing is not available in this page yet.</div>
+          </fieldset>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <section id="skills-view" class="view page">
+    <div id="header-skills" class="page-header" data-i18n="header_skills">Skills Store</div>
+    <div class="page-body">
+      <div class="skills-layout">
+        <div class="skills-header">
+          <div class="skills-header-left">
+            <button id="skills-upload-btn" class="skills-upload-btn" type="button" data-i18n="upload_skill">Upload Skill (.zip)</button>
+            <input id="skills-upload-input" type="file" accept=".zip" style="display:none">
+            <div id="skills-status" class="skills-status" aria-live="polite"></div>
+          </div>
+          <div id="skills-stats" class="skills-stats">Skills Store: 0</div>
+        </div>
+        <div id="skills-tags-bar" class="skills-tags-bar"></div>
+        <div id="skills-list" class="skills-grid"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="statistics-view" class="view page">
+    <div id="header-statistics" class="page-header" data-i18n="header_statistics">Statistics</div>
+    <div class="page-body">
+      <div class="statistics-layout">
+        <div id="statistics-status" class="statistics-status" aria-live="polite"></div>
+        <table class="statistics-table">
+          <thead>
+            <tr>
+              <th data-i18n="statistics_agent">Agent</th>
+              <th data-i18n="statistics_all_time">All-time</th>
+              <th data-i18n="statistics_this_run">This run</th>
+            </tr>
+          </thead>
+          <tbody id="statistics-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <div id="skill-modal-overlay" class="skill-modal-overlay">
+    <div class="skill-modal">
+      <div class="skill-modal-header">
+        <div>
+          <div id="skill-modal-title" class="skill-modal-title"></div>
+          <div id="skill-modal-meta" class="skill-modal-meta"></div>
+        </div>
+        <button id="skill-modal-close" class="skill-modal-close" type="button">&times;</button>
+      </div>
+      <div class="skill-modal-body">
+        <div id="skill-modal-usage" class="skill-modal-usage"></div>
+        <pre id="skill-modal-markdown" class="skill-modal-markdown"></pre>
+      </div>
+    </div>
+  </div>
+
+  <div id="publish-modal-overlay" class="publish-modal-overlay">
+    <div class="publish-modal">
+      <div class="publish-modal-header">
+        <div id="publish-modal-title" class="publish-modal-title" data-i18n="publish_to_hub">Publish to Agent Store</div>
+        <button id="publish-modal-close" class="publish-modal-close" type="button">&times;</button>
+      </div>
+      <div class="publish-modal-body">
+        <div class="publish-field">
+          <label for="publish-name" data-i18n="publish_template_name">Template name</label>
+          <input id="publish-name" type="text">
+        </div>
+        <div class="publish-field">
+          <label for="publish-description" data-i18n="publish_description">Description</label>
+          <textarea id="publish-description" rows="3"></textarea>
+        </div>
+        <div class="publish-field">
+          <label for="publish-tags" data-i18n="publish_tags">Tags (comma-separated)</label>
+          <input id="publish-tags" type="text">
+        </div>
+        <div class="publish-field">
+          <label for="publish-goals" data-i18n="publish_goals">Goals (one per line)</label>
+          <textarea id="publish-goals" rows="5"></textarea>
+        </div>
+        <div class="publish-field">
+          <label for="publish-soul" data-i18n="publish_soul">Persona (SOUL.md)</label>
+          <textarea id="publish-soul" rows="10"></textarea>
+        </div>
+        <div class="publish-field">
+          <label data-i18n="publish_skills_preview">Skills to publish (read-only)</label>
+          <div id="publish-skills-card" class="publish-skills-card">
+            <div id="publish-skills-empty" class="publish-skills-empty" data-i18n="publish_no_skills">No skills will be published.</div>
+            <ul id="publish-skills-list" class="publish-skills-list" hidden></ul>
+          </div>
+        </div>
+      </div>
+      <div class="publish-modal-footer">
+        <button id="publish-cancel-btn" class="publish-modal-btn" type="button" data-i18n="cancel">Cancel</button>
+        <button id="publish-submit-btn" class="publish-modal-btn primary" type="button" data-i18n="publish">Publish</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  const ROUTE_AGENTS = "#/agents";
+  const ROUTE_MONITOR = "#/monitor";
+  const ROUTE_AGENT_HUB = "#/agent-hub";
+  const ROUTE_CONFIG = "#/config";
+  const ROUTE_SKILLS = "#/skills";
+  const ROUTE_STATISTICS = "#/statistics";
+  const ROUTE_AGENTS_PREFIX = "#/agents/";
+  const WEBUI_LANGUAGE_STORAGE_KEY = "drclaw-web-lang-v1";
+
+  const agentsGrid = document.getElementById("agents-grid");
+  const agentsEmpty = document.getElementById("agents-empty");
+  const views = {
+    agents: document.getElementById("agents-view"),
+    agent_hub: document.getElementById("agent-hub-view"),
+    config: document.getElementById("config-view"),
+    skills: document.getElementById("skills-view"),
+    statistics: document.getElementById("statistics-view")
+  };
+  const navButtons = Array.from(document.querySelectorAll(".nav-item[data-route]"));
+  const langSwitchZh = document.getElementById("lang-switch-zh");
+  const langSwitchEn = document.getElementById("lang-switch-en");
+
+  const teamChatPanel = document.getElementById("team-chat-panel");
+  const floatingChatPublishBtn = document.getElementById("floating-chat-publish");
+  const chatHeader = document.getElementById("chat-header");
+  const messagesEl = document.getElementById("messages");
+  const inputBar = document.getElementById("input-bar");
+  const chatFilePending = document.getElementById("chat-file-pending");
+  const chatFileBtn = document.getElementById("chat-file-btn");
+  const chatFileInput = document.getElementById("chat-file-input");
+  const msgInput = document.getElementById("msg-input");
+  const sendBtn = document.getElementById("send-btn");
+  const chatEmpty = document.getElementById("chat-empty");
+  const configForm = document.getElementById("config-form");
+  const configStatus = document.getElementById("config-status");
+  const configReloadBtn = document.getElementById("config-reload-btn");
+  const configSaveBtn = document.getElementById("config-save-btn");
+
+  const cfgProviderApiKey = document.getElementById("cfg-provider-api-key");
+  const cfgProviderApiBase = document.getElementById("cfg-provider-api-base");
+  const cfgProviderModel = document.getElementById("cfg-provider-model");
+  const cfgAgentMaxIterations = document.getElementById("cfg-agent-max-iterations");
+  const cfgAgentMaxTokens = document.getElementById("cfg-agent-max-tokens");
+  const cfgAgentTemperature = document.getElementById("cfg-agent-temperature");
+  const cfgAgentMemoryWindow = document.getElementById("cfg-agent-memory-window");
+  const cfgAgentMaxHistory = document.getElementById("cfg-agent-max-history");
+  const cfgDataDir = document.getElementById("cfg-data-dir");
+  const cfgDaemonFrontends = document.getElementById("cfg-daemon-frontends");
+  const cfgDaemonShowToolCalls = document.getElementById("cfg-daemon-show-tool-calls");
+  const cfgDaemonVerboseChat = document.getElementById("cfg-daemon-verbose-chat");
+  const cfgTrayControlPanelUrl = document.getElementById("cfg-tray-control-panel-url");
+  const cfgTrayIconPath = document.getElementById("cfg-tray-icon-path");
+  const cfgTrayDaemonProgram = document.getElementById("cfg-tray-daemon-program");
+  const cfgTrayDaemonEnv = document.getElementById("cfg-tray-daemon-env");
+  const cfgTrayDaemonCwd = document.getElementById("cfg-tray-daemon-cwd");
+  const cfgTrayShutdownTimeoutSeconds = document.getElementById("cfg-tray-shutdown-timeout-seconds");
+  const cfgFeishuAppId = document.getElementById("cfg-feishu-app-id");
+  const cfgFeishuAppSecret = document.getElementById("cfg-feishu-app-secret");
+  const cfgFeishuEncryptKey = document.getElementById("cfg-feishu-encrypt-key");
+  const cfgFeishuVerificationToken = document.getElementById("cfg-feishu-verification-token");
+  const cfgFeishuAllowFrom = document.getElementById("cfg-feishu-allow-from");
+  const cfgFeishuReconnectIntervalSeconds = document.getElementById("cfg-feishu-reconnect-interval-seconds");
+  const cfgSerperApiKey = document.getElementById("cfg-serper-api-key");
+  const cfgSerperEndpoint = document.getElementById("cfg-serper-endpoint");
+  const cfgSerperMaxResults = document.getElementById("cfg-serper-max-results");
+  const cfgEnvGlobal = document.getElementById("cfg-env-global");
+  const cfgEnvScoped = document.getElementById("cfg-env-scoped");
+  const skillsUploadBtn = document.getElementById("skills-upload-btn");
+  const skillsUploadInput = document.getElementById("skills-upload-input");
+  const skillsListEl = document.getElementById("skills-list");
+  const skillsStatus = document.getElementById("skills-status");
+  const skillsStats = document.getElementById("skills-stats");
+  const skillModalOverlay = document.getElementById("skill-modal-overlay");
+  const skillModalTitle = document.getElementById("skill-modal-title");
+  const skillModalMeta = document.getElementById("skill-modal-meta");
+  const skillModalUsage = document.getElementById("skill-modal-usage");
+  const skillModalMarkdown = document.getElementById("skill-modal-markdown");
+  const skillModalClose = document.getElementById("skill-modal-close");
+  const skillsTagsBar = document.getElementById("skills-tags-bar");
+  const statisticsStatus = document.getElementById("statistics-status");
+  const statisticsTableBody = document.getElementById("statistics-table-body");
+
+  const hubGrid = document.getElementById("hub-grid");
+  const hubEmpty = document.getElementById("hub-empty");
+  const hubModalOverlay = document.getElementById("hub-modal-overlay");
+  const hubModalTitle = document.getElementById("hub-modal-title");
+  const hubModalDesc = document.getElementById("hub-modal-desc");
+  const hubModalBody = document.getElementById("hub-modal-body");
+  const hubModalClose = document.getElementById("hub-modal-close");
+  const hubModalActivate = document.getElementById("hub-modal-activate");
+  const addAgentBtn = document.getElementById("add-agent-btn");
+  const addAgentMenu = document.getElementById("add-agent-menu");
+  const addAgentFromScratchBtn = document.getElementById("add-agent-from-scratch");
+  const addAgentImportHubBtn = document.getElementById("add-agent-import-hub");
+  const monitorSummary = document.getElementById("monitor-summary");
+  const monitorStatus = document.getElementById("monitor-status");
+  const publishModalOverlay = document.getElementById("publish-modal-overlay");
+  const publishModalClose = document.getElementById("publish-modal-close");
+  const publishNameInput = document.getElementById("publish-name");
+  const publishDescriptionInput = document.getElementById("publish-description");
+  const publishTagsInput = document.getElementById("publish-tags");
+  const publishGoalsInput = document.getElementById("publish-goals");
+  const publishSoulInput = document.getElementById("publish-soul");
+  const publishSkillsList = document.getElementById("publish-skills-list");
+  const publishSkillsEmpty = document.getElementById("publish-skills-empty");
+  const publishCancelBtn = document.getElementById("publish-cancel-btn");
+  const publishSubmitBtn = document.getElementById("publish-submit-btn");
+
+  let activeAgent = null;
+  let agents = [];
+  const history = {};
+  const historyLoadedByAgent = {};
+  const historyLoadingByAgent = {};
+  const pendingByAgent = {};
+  const pendingFilesByAgent = {};
+  let configData = null;
+  let configLoading = null;
+  let skillsData = [];
+  let statisticsData = [];
+  let hubTemplates = [];
+  let hubModalCurrent = null;
+  let hubFocusTarget = null;
+  let skillsLoading = null;
+  let statisticsLoading = null;
+  let selectedTags = [];
+  let allTags = [];
+  let activeSkillId = null;
+  let ws = null;
+  let agentRefreshTimer = null;
+  let monitorWsState = "disconnected";
+  let monitorRecentEventCount = 0;
+  let currentLanguage = loadWebUiLanguage();
+  let publishInFlight = false;
+  const ASSET_CACHE_BUST = String(Date.now());
+
+  const I18N = {
+    en: {
+      nav_my_team: "My Lab",
+      nav_agent_hub: "Agent Store",
+      nav_skills: "Skills Store",
+      nav_statistics: "Statistics",
+      nav_config: "Config",
+      header_my_team: "My Lab",
+      header_agent_hub: "Agent Store",
+      header_config: "Config",
+      header_skills: "Skills Store",
+      header_statistics: "Statistics",
+      statistics_agent: "Agent",
+      statistics_consumption: "Consumption",
+      statistics_all_time: "All-time",
+      statistics_this_run: "This run",
+      statistics_empty: "No usage yet",
+      add_agent: "Add Agent",
+      add_agent_from_scratch: "From scratch",
+      add_agent_import_hub: "Import from agent store",
+      activate: "Activate",
+      activated: "Activated",
+      hub_section_activated: "Activated",
+      hub_section_not_activated: "Not activated",
+      reload: "Reload",
+      save: "Save",
+      upload_skill: "Upload Skill (.zip)",
+      publish: "Publish",
+      publish_to_hub: "Publish to Agent Store",
+      publish_template_name: "Template name",
+      publish_description: "Description",
+      publish_tags: "Tags (comma-separated)",
+      publish_goals: "Goals (one per line)",
+      publish_soul: "Persona (SOUL.md)",
+      publish_skills_preview: "Skills to publish (read-only)",
+      publish_no_skills: "No skills will be published.",
+      publish_skill_source_project: "project",
+      publish_skill_source_global: "global",
+      cancel: "Cancel",
+      publish_success: "Template published successfully.",
+      publish_failed: "Publish failed",
+      publish_not_available: "Only active project agents can be published.",
+      publish_name_required: "Template name is required.",
+      send: "Send",
+      attach_file: "Attach files",
+      open_chat: "Open Chat",
+      type_message: "Type a message...",
+      monitor_agents: "Agents",
+      monitor_links: "Links",
+      monitor_events: "Events",
+      monitor_ws_prefix: "WS",
+      ws_connected: "connected",
+      ws_connecting: "connecting",
+      ws_disconnected: "disconnected",
+      skills_count_prefix: "Skills Store",
+    },
+    zh: {
+      nav_my_team: "我的实验室",
+      nav_agent_hub: "智能体商店",
+      nav_skills: "技能商店",
+      nav_statistics: "用量统计",
+      nav_config: "配置",
+      header_my_team: "我的实验室",
+      header_agent_hub: "智能体商店",
+      header_config: "配置",
+      header_skills: "技能商店",
+      header_statistics: "用量统计",
+      statistics_agent: "智能体",
+      statistics_consumption: "消耗",
+      statistics_all_time: "累计",
+      statistics_this_run: "本次运行",
+      statistics_empty: "暂无使用记录",
+      add_agent: "添加智能体",
+      add_agent_from_scratch: "从零创建",
+      add_agent_import_hub: "从智能体商店导入",
+      activate: "激活",
+      activated: "已激活",
+      hub_section_activated: "已激活",
+      hub_section_not_activated: "未激活",
+      reload: "重新加载",
+      save: "保存",
+      upload_skill: "上传技能 (.zip)",
+      publish: "发布",
+      publish_to_hub: "发布到智能体商店",
+      publish_template_name: "模板名称",
+      publish_description: "描述",
+      publish_tags: "标签（逗号分隔）",
+      publish_goals: "目标（每行一个）",
+      publish_soul: "人格设定（SOUL.md）",
+      publish_skills_preview: "将发布的技能（只读）",
+      publish_no_skills: "没有技能会被发布。",
+      publish_skill_source_project: "项目",
+      publish_skill_source_global: "全局",
+      cancel: "取消",
+      publish_success: "模板发布成功。",
+      publish_failed: "发布失败",
+      publish_not_available: "仅可发布活跃的项目智能体。",
+      publish_name_required: "模板名称不能为空。",
+      send: "发送",
+      attach_file: "附加文件",
+      open_chat: "打开聊天",
+      type_message: "输入消息...",
+      monitor_agents: "智能体",
+      monitor_links: "连线",
+      monitor_events: "事件",
+      monitor_ws_prefix: "网络",
+      ws_connected: "已连接",
+      ws_connecting: "连接中",
+      ws_disconnected: "已断开",
+      skills_count_prefix: "技能商店",
+    },
+  };
+
+  function normalizeLanguage(lang) {
+    if (lang === "zh") return "zh";
+    return "en";
+  }
+
+  function loadWebUiLanguage() {
+    try {
+      return normalizeLanguage(localStorage.getItem(WEBUI_LANGUAGE_STORAGE_KEY));
+    } catch (_err) {
+      return "en";
+    }
+  }
+
+  function saveWebUiLanguage(lang) {
+    try {
+      localStorage.setItem(WEBUI_LANGUAGE_STORAGE_KEY, normalizeLanguage(lang));
+    } catch (_err) {
+      // Ignore persistence errors.
+    }
+  }
+
+  function t(key) {
+    const table = I18N[currentLanguage] || I18N.en;
+    if (Object.prototype.hasOwnProperty.call(table, key)) {
+      return table[key];
+    }
+    return I18N.en[key] || key;
+  }
+
+  function apiUrl(path) {
+    const sep = path.indexOf("?") === -1 ? "?" : "&";
+    return path + sep + "lang=" + encodeURIComponent(currentLanguage);
+  }
+
+  function skillDisplayName(skill) {
+    if (!skill || typeof skill !== "object") return "";
+    return String(skill.display_name || skill.name || "");
+  }
+
+  function skillDisplayDescription(skill) {
+    if (!skill || typeof skill !== "object") return "";
+    return String(skill.display_description || skill.description || "");
+  }
+
+  function agentDisplayName(agent) {
+    if (!agent || typeof agent !== "object") return "";
+    return String(agent.display_name || agent.name || agent.label || agent.id || "");
+  }
+
+  function applyLanguage(lang) {
+    currentLanguage = normalizeLanguage(lang);
+    document.documentElement.lang = currentLanguage === "zh" ? "zh-CN" : "en";
+
+    document.querySelectorAll("[data-i18n]").forEach(function(el) {
+      const key = el.getAttribute("data-i18n");
+      if (!key) return;
+      el.textContent = t(key);
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(function(el) {
+      const key = el.getAttribute("data-i18n-placeholder");
+      if (!key) return;
+      el.setAttribute("placeholder", t(key));
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach(function(el) {
+      const key = el.getAttribute("data-i18n-title");
+      if (!key) return;
+      el.setAttribute("title", t(key));
+    });
+    document.querySelectorAll("[data-i18n-aria-label]").forEach(function(el) {
+      const key = el.getAttribute("data-i18n-aria-label");
+      if (!key) return;
+      el.setAttribute("aria-label", t(key));
+    });
+
+    if (langSwitchZh) {
+      langSwitchZh.classList.toggle("active", currentLanguage === "zh");
+    }
+    if (langSwitchEn) {
+      langSwitchEn.classList.toggle("active", currentLanguage === "en");
+    }
+
+    setMonitorWsState(monitorWsState);
+    renderSkillsStats();
+    if (statisticsData.length || (views.statistics && views.statistics.classList.contains("active"))) {
+      renderStatistics();
+    }
+    if (isAgentsViewActive()) {
+      renderMonitor();
+    }
+    void fetchAgents();
+    if (skillsData.length || (views.skills && views.skills.classList.contains("active"))) {
+      loadSkills(null, true).catch(function() {});
+    }
+    if (hubTemplates.length || (views.agent_hub && views.agent_hub.classList.contains("active"))) {
+      void fetchHubTemplates();
+    }
+    if (views.statistics && views.statistics.classList.contains("active")) {
+      loadStatistics(true).catch(function() {});
+    }
+  }
+
+  function setLanguage(lang) {
+    const normalized = normalizeLanguage(lang);
+    saveWebUiLanguage(normalized);
+    applyLanguage(normalized);
+  }
+
+  function esc(s) {
+    const d = document.createElement("div");
+    d.textContent = String(s == null ? "" : s);
+    return d.innerHTML;
+  }
+
+  function formatFileSize(bytes) {
+    const n = Number(bytes || 0);
+    if (!Number.isFinite(n) || n <= 0) return "0 B";
+    if (n < 1024) return Math.round(n) + " B";
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+    return (n / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  function isAgentsViewActive() {
+    return views.agents.classList.contains("active");
+  }
+
+  function setFloatingChatVisible(_visible) {
+    // No-op: chat panel is always visible within the agents view.
+  }
+
+  function setConfigBusy(isBusy) {
+    configReloadBtn.disabled = isBusy;
+    configSaveBtn.disabled = isBusy;
+  }
+
+  function closeAddAgentMenu() {
+    if (!addAgentMenu || !addAgentBtn) return;
+    addAgentMenu.hidden = true;
+    addAgentBtn.setAttribute("aria-expanded", "false");
+  }
+
+  function openAddAgentMenu() {
+    if (!addAgentMenu || !addAgentBtn) return;
+    addAgentMenu.hidden = false;
+    addAgentBtn.setAttribute("aria-expanded", "true");
+  }
+
+  function toggleAddAgentMenu() {
+    if (!addAgentMenu) return;
+    if (addAgentMenu.hidden) {
+      openAddAgentMenu();
+      return;
+    }
+    closeAddAgentMenu();
+  }
+
+  function setConfigStatus(level, text) {
+    configStatus.className = "config-status" + (level ? " " + level : "");
+    configStatus.textContent = text || "";
+  }
+
+  function prettyJson(value) {
+    return JSON.stringify(value || {}, null, 2);
+  }
+
+  function parseCsvList(value) {
+    return String(value || "")
+      .split(",")
+      .map(function(part) { return part.trim(); })
+      .filter(Boolean);
+  }
+
+  function formatCsvList(items) {
+    if (!Array.isArray(items)) return "";
+    return items.join(", ");
+  }
+
+  function parseLineList(value) {
+    return String(value || "")
+      .split(/\r?\n/)
+      .map(function(part) { return part.trim(); })
+      .filter(Boolean);
+  }
+
+  function formatLineList(items) {
+    if (!Array.isArray(items)) return "";
+    return items.join("\n");
+  }
+
+  function parseRequiredInt(raw, label) {
+    const value = String(raw == null ? "" : raw).trim();
+    if (!value) throw new Error(label + " is required.");
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed)) throw new Error(label + " must be an integer.");
+    return parsed;
+  }
+
+  function parseOptionalInt(raw, label) {
+    const value = String(raw == null ? "" : raw).trim();
+    if (!value) return null;
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed)) throw new Error(label + " must be an integer.");
+    return parsed;
+  }
+
+  function parseRequiredFloat(raw, label) {
+    const value = String(raw == null ? "" : raw).trim();
+    if (!value) throw new Error(label + " is required.");
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) throw new Error(label + " must be a number.");
+    return parsed;
+  }
+
+  function formatConfigApiError(status, bodyError, action) {
+    if (status === 404) {
+      return "Config API not found (HTTP 404). Restart daemon with the latest code so /api/config is available.";
+    }
+    if (status === 400 && bodyError) {
+      return action + " failed: " + bodyError;
+    }
+    if (bodyError) {
+      return action + " failed: " + bodyError;
+    }
+    return action + " failed: HTTP " + status;
+  }
+
+  function populateConfigForm(config) {
+    const provider = config.provider || {};
+    const agent = config.agent || {};
+    const daemon = config.daemon || {};
+    const tray = config.tray || {};
+    const feishu = config.feishu || {};
+    const serper = (((config.tools || {}).web || {}).serper || {});
+    const env = config.env || {};
+
+    cfgProviderApiKey.value = provider.api_key || "";
+    cfgProviderApiBase.value = provider.api_base || "";
+    cfgProviderModel.value = provider.model || "";
+
+    cfgAgentMaxIterations.value = agent.max_iterations == null ? "" : String(agent.max_iterations);
+    cfgAgentMaxTokens.value = agent.max_tokens == null ? "" : String(agent.max_tokens);
+    cfgAgentTemperature.value = agent.temperature == null ? "" : String(agent.temperature);
+    cfgAgentMemoryWindow.value = agent.memory_window == null ? "" : String(agent.memory_window);
+    cfgAgentMaxHistory.value = agent.max_history == null ? "" : String(agent.max_history);
+
+    cfgDataDir.value = config.data_dir || "";
+    cfgDaemonFrontends.value = formatCsvList(daemon.frontends);
+    cfgDaemonShowToolCalls.checked = daemon.show_tool_calls !== false;
+    cfgDaemonVerboseChat.checked = daemon.verbose_chat !== false;
+
+    cfgTrayControlPanelUrl.value = tray.control_panel_url || "";
+    cfgTrayIconPath.value = tray.icon_path || "";
+    cfgTrayDaemonProgram.value = formatLineList(tray.daemon_program);
+    cfgTrayDaemonEnv.value = prettyJson(tray.daemon_env);
+    cfgTrayDaemonCwd.value = tray.daemon_cwd || "";
+    cfgTrayShutdownTimeoutSeconds.value = tray.shutdown_timeout_seconds == null
+      ? ""
+      : String(tray.shutdown_timeout_seconds);
+
+    cfgFeishuAppId.value = feishu.app_id || "";
+    cfgFeishuAppSecret.value = feishu.app_secret || "";
+    cfgFeishuEncryptKey.value = feishu.encrypt_key || "";
+    cfgFeishuVerificationToken.value = feishu.verification_token || "";
+    cfgFeishuAllowFrom.value = formatCsvList(feishu.allow_from);
+    cfgFeishuReconnectIntervalSeconds.value = feishu.reconnect_interval_seconds == null
+      ? ""
+      : String(feishu.reconnect_interval_seconds);
+
+    cfgSerperApiKey.value = serper.api_key || "";
+    cfgSerperEndpoint.value = serper.endpoint || "";
+    cfgSerperMaxResults.value = serper.max_results == null ? "" : String(serper.max_results);
+
+    cfgEnvGlobal.value = prettyJson(env.global);
+    cfgEnvScoped.value = prettyJson(env.scoped);
+  }
+
+  function buildConfigPayload() {
+    if (!configData) {
+      throw new Error("Config is not loaded yet.");
+    }
+
+    const payload = {
+      provider: {
+        api_key: cfgProviderApiKey.value,
+        api_base: cfgProviderApiBase.value.trim() || null,
+        model: cfgProviderModel.value,
+      },
+      agent: {
+        max_iterations: parseRequiredInt(cfgAgentMaxIterations.value, "Agent max iterations"),
+        max_tokens: parseRequiredInt(cfgAgentMaxTokens.value, "Agent max tokens"),
+        temperature: parseRequiredFloat(cfgAgentTemperature.value, "Agent temperature"),
+        memory_window: parseRequiredInt(cfgAgentMemoryWindow.value, "Agent memory window"),
+        max_history: parseOptionalInt(cfgAgentMaxHistory.value, "Agent max history"),
+      },
+      data_dir: cfgDataDir.value,
+      daemon: {
+        frontends: parseCsvList(cfgDaemonFrontends.value),
+        verbose_chat: Boolean(cfgDaemonVerboseChat.checked),
+        show_tool_calls: Boolean(cfgDaemonShowToolCalls.checked),
+      },
+      tray: {
+        control_panel_url: cfgTrayControlPanelUrl.value,
+        icon_path: cfgTrayIconPath.value,
+        daemon_program: parseLineList(cfgTrayDaemonProgram.value),
+        daemon_env: ((configData.tray || {}).daemon_env || {}),
+        daemon_cwd: cfgTrayDaemonCwd.value,
+        shutdown_timeout_seconds: parseRequiredInt(
+          cfgTrayShutdownTimeoutSeconds.value,
+          "Tray shutdown timeout",
+        ),
+      },
+      feishu: {
+        app_id: cfgFeishuAppId.value,
+        app_secret: cfgFeishuAppSecret.value,
+        encrypt_key: cfgFeishuEncryptKey.value,
+        verification_token: cfgFeishuVerificationToken.value,
+        allow_from: parseCsvList(cfgFeishuAllowFrom.value),
+        reconnect_interval_seconds: parseRequiredInt(
+          cfgFeishuReconnectIntervalSeconds.value,
+          "Feishu reconnect interval",
+        ),
+      },
+      tools: {
+        web: {
+          serper: {
+            api_key: cfgSerperApiKey.value,
+            endpoint: cfgSerperEndpoint.value,
+            max_results: parseRequiredInt(cfgSerperMaxResults.value, "Serper max results"),
+          },
+        },
+      },
+      env: configData.env || { global: {}, scoped: {} },
+    };
+    return payload;
+  }
+
+  async function loadConfig(force) {
+    if (configLoading) return configLoading;
+    if (configData && !force) return configData;
+
+    setConfigBusy(true);
+    setConfigStatus("info", "Loading config...");
+    configLoading = (async function() {
+      try {
+        const r = await fetch("/api/config");
+        if (!r.ok) {
+          const body = await r.json().catch(function() { return {}; });
+          throw new Error(formatConfigApiError(r.status, body.error, "Load"));
+        }
+        configData = await r.json();
+        populateConfigForm(configData);
+        setConfigStatus("success", "Config loaded.");
+        return configData;
+      } catch (e) {
+        const message = e && e.message ? e.message : String(e);
+        setConfigStatus("error", "Failed to load config: " + message);
+        throw e;
+      } finally {
+        setConfigBusy(false);
+        configLoading = null;
+      }
+    })();
+
+    return configLoading;
+  }
+
+  async function saveConfig() {
+    if (!configData) {
+      try {
+        await loadConfig(false);
+      } catch (e) {
+        return;
+      }
+    }
+
+    let payload;
+    try {
+      payload = buildConfigPayload();
+    } catch (e) {
+      const message = e && e.message ? e.message : String(e);
+      setConfigStatus("error", message);
+      return;
+    }
+
+    setConfigBusy(true);
+    setConfigStatus("info", "Saving config...");
+    try {
+      const r = await fetch("/api/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const response = await r.json().catch(function() { return {}; });
+      if (!r.ok) {
+        throw new Error(formatConfigApiError(r.status, response.error, "Save"));
+      }
+      configData = response.config || payload;
+      populateConfigForm(configData);
+      setConfigStatus("success", "Config saved. Restart daemon to apply all changes.");
+    } catch (e) {
+      const message = e && e.message ? e.message : String(e);
+      setConfigStatus("error", "Failed to save config: " + message);
+    } finally {
+      setConfigBusy(false);
+    }
+  }
+
+  function setSkillsStatus(level, text) {
+    skillsStatus.className = "skills-status" + (level ? " " + level : "");
+    skillsStatus.textContent = text || "";
+  }
+
+  function renderSkillsStats(filteredCount) {
+    if (!skillsStats) return;
+    if (typeof filteredCount === "number") {
+      skillsStats.textContent = t("skills_count_prefix") + ": " + filteredCount;
+      return;
+    }
+    skillsStats.textContent = t("skills_count_prefix") + ": " + skillsData.length;
+  }
+
+  function tagMatchScore(skill) {
+    if (!selectedTags.length) return 0;
+    var tags = Array.isArray(skill.tags) ? skill.tags : [];
+    var score = 0;
+    for (var i = 0; i < selectedTags.length; i++) {
+      if (tags.indexOf(selectedTags[i]) !== -1) score++;
+    }
+    return score;
+  }
+
+  function appendSkillCard(skill) {
+    const card = document.createElement("div");
+    card.className = "skill-card";
+
+    const nameEl = document.createElement("div");
+    nameEl.className = "skill-card-name";
+    nameEl.textContent = skillDisplayName(skill);
+
+    const descEl = document.createElement("div");
+    descEl.className = "skill-card-desc";
+    descEl.textContent = skillDisplayDescription(skill);
+
+    const metaEl = document.createElement("div");
+    metaEl.className = "skill-card-meta";
+
+    const badge = document.createElement("span");
+    badge.className = "skill-card-badge " + (skill.source || "global");
+    badge.textContent = skill.source_label || skill.source || "global";
+    metaEl.appendChild(badge);
+
+    card.appendChild(nameEl);
+    card.appendChild(descEl);
+    card.appendChild(metaEl);
+
+    var skillTags = Array.isArray(skill.tags) ? skill.tags : [];
+    if (skillTags.length) {
+      var tagsRow = document.createElement("div");
+      tagsRow.className = "skill-card-tags";
+      for (var ti = 0; ti < skillTags.length; ti++) {
+        var pill = document.createElement("span");
+        pill.className = "skill-card-tag";
+        pill.textContent = skillTags[ti];
+        tagsRow.appendChild(pill);
+      }
+      card.appendChild(tagsRow);
+    }
+
+    card.onclick = function() {
+      loadSkillContent(skill.id).catch(function() {});
+    };
+    skillsListEl.appendChild(card);
+  }
+
+  function appendFilteredOutDivider(filteredOutCount) {
+    var divider = document.createElement("div");
+    divider.className = "skills-divider";
+    divider.textContent = "Filtered out (" + filteredOutCount + ")";
+    skillsListEl.appendChild(divider);
+  }
+
+  function formatSkillsApiError(status, bodyError, action) {
+    if (status === 404) return action + " failed: skill not found.";
+    if (status === 409 && bodyError) return action + " failed: " + bodyError;
+    if (status === 400 && bodyError) return action + " failed: " + bodyError;
+    if (bodyError) return action + " failed: " + bodyError;
+    return action + " failed: HTTP " + status;
+  }
+
+  function renderTagsBar() {
+    skillsTagsBar.innerHTML = "";
+    for (var i = 0; i < allTags.length; i++) {
+      var tag = allTags[i];
+      var chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "tag-chip" + (selectedTags.indexOf(tag) !== -1 ? " active" : "");
+      chip.textContent = tag;
+      chip.setAttribute("data-tag", tag);
+      chip.onclick = (function(t) {
+        return function() {
+          var idx = selectedTags.indexOf(t);
+          if (idx === -1) {
+            selectedTags.push(t);
+          } else {
+            selectedTags.splice(idx, 1);
+          }
+          renderTagsBar();
+          renderSkillsList();
+        };
+      })(tag);
+      skillsTagsBar.appendChild(chip);
+    }
+  }
+
+  function renderSkillsList() {
+    skillsListEl.innerHTML = "";
+
+    if (!skillsData.length) {
+      renderSkillsStats(0);
+      const empty = document.createElement("div");
+      empty.className = "empty-page";
+      empty.style.minHeight = "120px";
+      empty.textContent = "No skills found";
+      skillsListEl.appendChild(empty);
+      return;
+    }
+
+    var sorted = skillsData.slice();
+    if (selectedTags.length) {
+      sorted.sort(function(a, b) {
+        var scoreA = tagMatchScore(a);
+        var scoreB = tagMatchScore(b);
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return skillDisplayName(a).localeCompare(skillDisplayName(b));
+      });
+      var filtered = [];
+      var filteredOut = [];
+      for (var i = 0; i < sorted.length; i++) {
+        if (tagMatchScore(sorted[i]) > 0) {
+          filtered.push(sorted[i]);
+        } else {
+          filteredOut.push(sorted[i]);
+        }
+      }
+      renderSkillsStats(filtered.length);
+      for (var fi = 0; fi < filtered.length; fi++) {
+        appendSkillCard(filtered[fi]);
+      }
+      if (filteredOut.length) {
+        appendFilteredOutDivider(filteredOut.length);
+        for (var fo = 0; fo < filteredOut.length; fo++) {
+          appendSkillCard(filteredOut[fo]);
+        }
+      }
+      return;
+    }
+
+    renderSkillsStats(sorted.length);
+    for (var si = 0; si < sorted.length; si++) {
+      appendSkillCard(sorted[si]);
+    }
+  }
+
+  function showSkillModal(detail) {
+    skillModalTitle.textContent = skillDisplayName(detail) || "Skill";
+    const source = detail.source_label || detail.source || "";
+    var metaParts = source || "";
+    var modalTags = Array.isArray(detail.tags) ? detail.tags : [];
+    if (modalTags.length) {
+      metaParts += " \u00b7 tags: " + modalTags.join(", ");
+    }
+    if (detail.warning) {
+      metaParts += " \u00b7 " + detail.warning;
+    }
+    skillModalMeta.textContent = metaParts;
+    const usedByAgents = Array.isArray(detail.used_by_agents_display)
+      ? detail.used_by_agents_display
+      : (Array.isArray(detail.used_by_agents) ? detail.used_by_agents : []);
+    skillModalUsage.textContent = usedByAgents.length
+      ? ("Used by agent: " + usedByAgents.join(", "))
+      : "Not used";
+    skillModalMarkdown.textContent = detail.content || "";
+    skillModalOverlay.classList.add("visible");
+  }
+
+  function hideSkillModal() {
+    skillModalOverlay.classList.remove("visible");
+  }
+
+  async function loadSkillContent(skillId) {
+    if (!skillId) return;
+    setSkillsStatus("info", "Loading SKILL.md...");
+    try {
+      const r = await fetch(apiUrl("/api/skills/" + encodeURIComponent(skillId)));
+      const body = await r.json().catch(function() { return {}; });
+      if (!r.ok) {
+        throw new Error(formatSkillsApiError(r.status, body.error, "Load skill"));
+      }
+      activeSkillId = body.id || skillId;
+      setSkillsStatus("", "");
+      showSkillModal(body);
+    } catch (e) {
+      const message = e && e.message ? e.message : String(e);
+      setSkillsStatus("error", message);
+    }
+  }
+
+  async function loadSkills(preferredSkillId, force) {
+    if (skillsLoading) return skillsLoading;
+    if (!force && skillsData.length && !preferredSkillId) {
+      renderSkillsList();
+      return null;
+    }
+
+    setSkillsStatus("info", "Loading skills...");
+    skillsLoading = (async function() {
+      try {
+        const r = await fetch(apiUrl("/api/skills"));
+        const body = await r.json().catch(function() { return {}; });
+        if (!r.ok) {
+          throw new Error(formatSkillsApiError(r.status, body.error, "Load skills"));
+        }
+
+        skillsData = Array.isArray(body.skills) ? body.skills.slice() : [];
+        skillsData.sort(function(a, b) {
+          return skillDisplayName(a).localeCompare(skillDisplayName(b));
+        });
+        var tagSet = {};
+        for (var si = 0; si < skillsData.length; si++) {
+          var st = skillsData[si].tags;
+          if (Array.isArray(st)) {
+            for (var ti = 0; ti < st.length; ti++) {
+              tagSet[st[ti]] = true;
+            }
+          }
+        }
+        allTags = Object.keys(tagSet).sort();
+        renderTagsBar();
+        renderSkillsList();
+        setSkillsStatus("", "");
+      } catch (e) {
+        const message = e && e.message ? e.message : String(e);
+        setSkillsStatus("error", "Failed to load skills: " + message);
+      } finally {
+        skillsLoading = null;
+      }
+    })();
+    return skillsLoading;
+  }
+
+  async function uploadSkill(file) {
+    if (!file) return;
+    setSkillsStatus("info", "Uploading skill...");
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const r = await fetch("/api/skills/upload", {
+        method: "POST",
+        body: form,
+      });
+      const body = await r.json().catch(function() { return {}; });
+      if (!r.ok) {
+        throw new Error(formatSkillsApiError(r.status, body.error, "Upload"));
+      }
+
+      const uploadedId = body.skill && body.skill.id ? body.skill.id : null;
+      await loadSkills(uploadedId, true);
+      setSkillsStatus("success", body.message || "Skill uploaded.");
+    } catch (e) {
+      const message = e && e.message ? e.message : String(e);
+      setSkillsStatus("error", message);
+    } finally {
+      skillsUploadInput.value = "";
+    }
+  }
+
+  function setStatisticsStatus(text) {
+    if (!statisticsStatus) return;
+    statisticsStatus.textContent = text || "";
+  }
+
+  function formatTokenCount(value) {
+    const n = Number(value || 0);
+    if (!Number.isFinite(n)) return "0";
+    return Math.max(0, Math.round(n)).toLocaleString();
+  }
+
+  function formatUsd(value) {
+    const n = Number(value || 0);
+    if (!Number.isFinite(n)) return "$0.000000";
+    return "$" + Math.max(0, n).toFixed(6);
+  }
+
+  function consumptionSummary(scope) {
+    const row = scope || {};
+    return formatTokenCount(row.total_tokens) + " tokens · " + formatUsd(row.total_cost_usd);
+  }
+
+  function renderStatistics() {
+    if (!statisticsTableBody) return;
+    statisticsTableBody.innerHTML = "";
+    if (!statisticsData.length) {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = 3;
+      td.className = "empty-page";
+      td.style.height = "120px";
+      td.textContent = t("statistics_empty");
+      tr.appendChild(td);
+      statisticsTableBody.appendChild(tr);
+      return;
+    }
+
+    for (let i = 0; i < statisticsData.length; i++) {
+      const item = statisticsData[i];
+      const tr = document.createElement("tr");
+
+      const tdAgent = document.createElement("td");
+      tdAgent.innerHTML =
+        "<div class=\"statistics-agent-name\">" + esc(item.display_agent_name || item.agent_name || item.agent_id || "") + "</div>" +
+        "<div class=\"statistics-agent-id\">" + esc(item.agent_id || "") + "</div>";
+
+      const tdAllTime = document.createElement("td");
+      tdAllTime.textContent = consumptionSummary(item.all_time);
+
+      const tdThisRun = document.createElement("td");
+      tdThisRun.textContent = consumptionSummary(item.this_run);
+
+      tr.appendChild(tdAgent);
+      tr.appendChild(tdAllTime);
+      tr.appendChild(tdThisRun);
+      statisticsTableBody.appendChild(tr);
+    }
+  }
+
+  async function loadStatistics(force) {
+    if (statisticsLoading) return statisticsLoading;
+    if (!force && statisticsData.length) {
+      renderStatistics();
+      return null;
+    }
+
+    setStatisticsStatus("Loading statistics...");
+    statisticsLoading = (async function() {
+      try {
+        const response = await fetch(apiUrl("/api/statistics"));
+        const body = await response.json().catch(function() { return {}; });
+        if (!response.ok) {
+          throw new Error("Failed to load statistics: HTTP " + response.status);
+        }
+        statisticsData = Array.isArray(body.agents) ? body.agents.slice() : [];
+        renderStatistics();
+        setStatisticsStatus("");
+      } catch (e) {
+        statisticsData = [];
+        renderStatistics();
+        const message = e && e.message ? e.message : String(e);
+        setStatisticsStatus(message);
+      } finally {
+        statisticsLoading = null;
+      }
+    })();
+    return statisticsLoading;
+  }
+
+  function setMonitorWsState(state) {
+    monitorWsState = state;
+    if (!monitorStatus) return;
+
+    var stateKey = "ws_disconnected";
+    if (state === "connected") stateKey = "ws_connected";
+    if (state === "connecting") stateKey = "ws_connecting";
+    monitorStatus.textContent = t("monitor_ws_prefix") + ": " + t(stateKey);
+    monitorStatus.className = "monitor-status " + (
+      state === "connected" ? "live" :
+      state === "connecting" ? "connecting" : "down"
+    );
+  }
+
+  function monitorNodeTypeFromId(agentId) {
+    if (agentId === "main") return "assistant";
+    if (agentId.startsWith("proj:")) return "student";
+    if (agentId.startsWith("equip:")) return "equipment";
+    if (agentId.startsWith("ext:")) return "external";
+    return "other";
+  }
+
+  function getMonitorAgentModel(agentId) {
+    const existing = getAgentById(agentId);
+    if (existing) {
+      return {
+        id: existing.id,
+        label: agentDisplayName(existing),
+        status: existing.status === "error"
+          ? "error"
+          : (pendingByAgent[existing.id] ? "working" : "idle"),
+        type: existing.type || monitorNodeTypeFromId(existing.id),
+      };
+    }
+    return {
+      id: agentId,
+      label: agentId,
+      status: "idle",
+      type: monitorNodeTypeFromId(agentId),
+    };
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function recordMonitorEvent(_msgType, _source, _topic) {
+    monitorRecentEventCount += 1;
+    if (isAgentsViewActive()) {
+      renderMonitor();
+    }
+  }
+
+  function buildMonitorModels() {
+    const agentModels = [];
+    for (let i = 0; i < agents.length; i++) {
+      const model = getMonitorAgentModel(agents[i].id);
+      model.kind = "agent";
+      model.isProject = model.id.startsWith("proj:");
+      agentModels.push(model);
+    }
+    agentModels.sort(function(a, b) {
+      if (a.id === "main") return -1;
+      if (b.id === "main") return 1;
+      return a.label.localeCompare(b.label);
+    });
+
+    return agentModels;
+  }
+
+
+  function renderMonitor() {
+    const models = renderAgentsPage();
+    if (monitorSummary) {
+      const agentNodeCount = models.filter(function(m) { return m.kind === "agent"; }).length;
+      monitorSummary.textContent =
+        t("monitor_agents") + ": " + agentNodeCount +
+        " · " + t("monitor_events") + ": " + monitorRecentEventCount;
+    }
+  }
+
+  function normalizeHash(hash) {
+    if (!hash || hash === "#") return ROUTE_AGENTS;
+    if (hash === ROUTE_MONITOR) return ROUTE_AGENTS;
+    if (
+      hash === ROUTE_AGENTS ||
+      hash === ROUTE_AGENT_HUB ||
+      hash === ROUTE_CONFIG ||
+      hash === ROUTE_SKILLS ||
+      hash === ROUTE_STATISTICS
+    ) {
+      return hash;
+    }
+    if (hash.startsWith(ROUTE_AGENTS_PREFIX) && hash.length > ROUTE_AGENTS_PREFIX.length) return hash;
+    return ROUTE_AGENTS;
+  }
+
+  function parseRoute() {
+    const normalized = normalizeHash(window.location.hash);
+    if (normalized !== window.location.hash) {
+      window.location.hash = normalized;
+      return null;
+    }
+    if (normalized === ROUTE_AGENT_HUB) return { view: "agent_hub" };
+    if (normalized === ROUTE_CONFIG) return { view: "config" };
+    if (normalized === ROUTE_SKILLS) return { view: "skills" };
+    if (normalized === ROUTE_STATISTICS) return { view: "statistics" };
+    if (normalized.startsWith(ROUTE_AGENTS_PREFIX)) {
+      return { view: "agents", agentId: decodeURIComponent(normalized.slice(ROUTE_AGENTS_PREFIX.length)) };
+    }
+    return { view: "agents" };
+  }
+
+  function setActiveView(view) {
+    Object.keys(views).forEach((key) => {
+      views[key].classList.toggle("active", key === view);
+    });
+
+    navButtons.forEach((btn) => {
+      const route = btn.dataset.route;
+      const active = (view === "agents" && route === ROUTE_AGENTS) ||
+        (view === "agent_hub" && route === ROUTE_AGENT_HUB) ||
+        (view === "config" && route === ROUTE_CONFIG) ||
+        (view === "skills" && route === ROUTE_SKILLS) ||
+        (view === "statistics" && route === ROUTE_STATISTICS);
+      btn.classList.toggle("active", active);
+    });
+  }
+
+  function isBackendRunning(agent) {
+    return agent.status !== "error";
+  }
+
+  function uiStatus(agent) {
+    if (agent.status === "error") return "error";
+    if (pendingByAgent[agent.id]) return "working";
+    return "idle";
+  }
+
+  function withAssetCacheBust(url) {
+    if (typeof url !== "string") return url;
+    const raw = url.trim();
+    if (!raw.startsWith("/assets/")) return raw;
+    const sep = raw.includes("?") ? "&" : "?";
+    return raw + sep + "v=" + encodeURIComponent(ASSET_CACHE_BUST);
+  }
+
+  function avatarForAgent(agent) {
+    if (agent.avatar) return withAssetCacheBust(agent.avatar);
+    if (
+      agent.id === "main"
+      || (agent.name || "").toLowerCase() === "alice"
+      || (agent.name || "") === "虾秘"
+    ) {
+      return withAssetCacheBust("/assets/avatars/8.png");
+    }
+    if (agent.type === "student") return withAssetCacheBust("/assets/avatars/17.png");
+    if (agent.type === "equipment") return withAssetCacheBust("/assets/avatar_3.jpg");
+    if (agent.type === "external") return withAssetCacheBust("/assets/avatars/1.png");
+    return withAssetCacheBust("/assets/DrClaw.png");
+  }
+
+  function renderAgentsPage() {
+    agentsGrid.innerHTML = "";
+    const monitorModels = buildMonitorModels();
+    if (!monitorModels.length) {
+      agentsEmpty.style.display = "none";
+      return monitorModels;
+    }
+    agentsEmpty.style.display = "none";
+
+    for (const model of monitorModels) {
+      const sourceAgent = getAgentById(model.id);
+      const status = sourceAgent
+        ? uiStatus(sourceAgent)
+        : (model.status === "error" ? "error" : "idle");
+      const card = document.createElement("button");
+      card.type = "button";
+      const glow = status === "working"
+        ? " node-glow-working"
+        : status === "error"
+        ? " node-glow-error"
+        : " node-glow-idle";
+      card.className = "desk-card" + glow + (activeAgent === model.id ? " selected" : "");
+      card.dataset.id = model.id;
+      const avatarSrc = sourceAgent ? avatarForAgent(sourceAgent) : avatarForAgent(model);
+      const avatarFallback = (
+        sourceAgent && sourceAgent.type === "student"
+          ? withAssetCacheBust("/assets/avatars/17.png")
+          : sourceAgent && sourceAgent.avatar
+          ? withAssetCacheBust("/assets/avatar_2.jpg")
+          : withAssetCacheBust("/assets/DrClaw.png")
+      );
+      card.innerHTML =
+        "<img class=\"desk-img\" src=\"/assets/desk1.png\" alt=\"desk\">" +
+        "<div class=\"desk-agent-info\">" +
+          "<img class=\"desk-avatar\" src=\"" + esc(avatarSrc) + "\" alt=\"" + esc(model.label || model.id) + " avatar\">" +
+          "<div class=\"desk-name\">" + esc(model.label || model.id) + "</div>" +
+        "</div>";
+      const avatar = card.querySelector(".desk-avatar");
+      if (avatar) {
+        if (status === "working") {
+          avatar.style.animation = "avatar-rotate 2.1s linear infinite";
+        } else {
+          avatar.style.animation = "none";
+          avatar.style.transform = "rotate(0deg)";
+        }
+        avatar.addEventListener("error", function() {
+          avatar.src = avatarFallback;
+        }, { once: true });
+      }
+      card.onclick = function() {
+        openChat(model.id);
+      };
+      agentsGrid.appendChild(card);
+    }
+    return monitorModels;
+  }
+
+  /* ---- Agent Hub ---- */
+
+  async function fetchHubTemplates() {
+    try {
+      const res = await fetch(apiUrl("/api/agent-hub"));
+      const data = await res.json();
+      hubTemplates = data.templates || [];
+    } catch (e) {
+      hubTemplates = [];
+    }
+    renderHubPage();
+  }
+
+  function createHubCard(template) {
+    const card = document.createElement("button");
+    card.type = "button";
+    card.className = "hub-card";
+    const rawAvatar = typeof template.avatar === "string" ? template.avatar.trim() : "";
+    const avatarSrcRaw = rawAvatar ? (rawAvatar.startsWith("/") ? rawAvatar : "/" + rawAvatar) : "/assets/avatars/17.png";
+    const avatarSrc = withAssetCacheBust(avatarSrcRaw);
+
+    let tagsHtml = "";
+    if (template.tags && template.tags.length) {
+      tagsHtml = "<div class=\"hub-card-tags\">";
+      for (const tag of template.tags) {
+        tagsHtml += "<span class=\"hub-card-tag\">" + esc(tag) + "</span>";
+      }
+      tagsHtml += "</div>";
+    }
+
+    let activateHtml;
+    if (template.activated) {
+      activateHtml = "<span class=\"hub-activate-btn activated\">" + esc(t("activated")) + "</span>";
+    } else {
+      activateHtml = "<button class=\"hub-activate-btn\" data-name=\"" + esc(template.name) + "\" type=\"button\">" + esc(t("activate")) + "</button>";
+    }
+
+    card.innerHTML =
+      "<div class=\"hub-card-head\">" +
+        "<img class=\"hub-card-avatar\" src=\"" + esc(avatarSrc) + "\" alt=\"" + esc(template.display_name || template.name) + " avatar\" loading=\"lazy\">" +
+        "<div class=\"hub-card-name\">" + esc(template.display_name || template.name) + "</div>" +
+      "</div>" +
+      "<div class=\"hub-card-desc\">" + esc(template.display_description || template.description || "No description") + "</div>" +
+      "<div class=\"hub-card-footer\">" +
+        tagsHtml +
+        activateHtml +
+      "</div>";
+
+    const avatar = card.querySelector(".hub-card-avatar");
+    if (avatar) {
+      avatar.addEventListener("error", function() {
+        avatar.src = withAssetCacheBust("/assets/avatars/17.png");
+      });
+    }
+
+    card.onclick = function(e) {
+      if (e.target.classList.contains("hub-activate-btn") && !e.target.classList.contains("activated")) {
+        e.stopPropagation();
+        activateHubTemplate(template.name);
+        return;
+      }
+      showHubDetail(template.name);
+    };
+    return card;
+  }
+
+  function maybeFocusHubInactiveSection() {
+    if (hubFocusTarget !== "inactive") return;
+    hubFocusTarget = null;
+    const anchor = document.getElementById("hub-inactive-anchor");
+    if (anchor) {
+      anchor.scrollIntoView({ block: "start" });
+      return;
+    }
+    const pageBody = views.agent_hub ? views.agent_hub.querySelector(".page-body") : null;
+    if (pageBody) {
+      pageBody.scrollTop = 0;
+    }
+  }
+
+  async function startAgentFromScratchFlow() {
+    closeAddAgentMenu();
+    openChat("main");
+    await sendTextToAgent("main", "Hey 虾秘, I want to create a new agent");
+  }
+
+  function navigateToHubInactiveSection() {
+    closeAddAgentMenu();
+    hubFocusTarget = "inactive";
+    if (window.location.hash !== ROUTE_AGENT_HUB) {
+      window.location.hash = ROUTE_AGENT_HUB;
+      return;
+    }
+    void fetchHubTemplates();
+  }
+
+  function renderHubPage() {
+    hubGrid.innerHTML = "";
+    if (!hubTemplates.length) {
+      hubEmpty.style.display = "flex";
+      hubFocusTarget = null;
+      return;
+    }
+    hubEmpty.style.display = "none";
+
+    const activatedTemplates = [];
+    const inactiveTemplates = [];
+    for (const template of hubTemplates) {
+      if (template.activated) {
+        activatedTemplates.push(template);
+      } else {
+        inactiveTemplates.push(template);
+      }
+    }
+
+    if (activatedTemplates.length) {
+      const activatedLabel = document.createElement("div");
+      activatedLabel.className = "hub-section-label";
+      activatedLabel.textContent = t("hub_section_activated");
+      hubGrid.appendChild(activatedLabel);
+      for (const template of activatedTemplates) {
+        hubGrid.appendChild(createHubCard(template));
+      }
+    }
+
+    if (inactiveTemplates.length) {
+      const inactiveDivider = document.createElement("div");
+      inactiveDivider.id = "hub-inactive-anchor";
+      inactiveDivider.className = "hub-divider";
+      inactiveDivider.textContent = t("hub_section_not_activated");
+      hubGrid.appendChild(inactiveDivider);
+      for (const template of inactiveTemplates) {
+        hubGrid.appendChild(createHubCard(template));
+      }
+    }
+
+    maybeFocusHubInactiveSection();
+  }
+
+  async function showHubDetail(name) {
+    try {
+      const res = await fetch(apiUrl("/api/agent-hub/" + encodeURIComponent(name)));
+      if (!res.ok) return;
+      const data = await res.json();
+      hubModalCurrent = data;
+
+      hubModalTitle.textContent = data.display_name || data.name;
+      hubModalDesc.textContent = data.display_description || data.description || "";
+
+      let bodyHtml = "";
+
+      if (data.goals && data.goals.length) {
+        bodyHtml += "<div class=\"hub-modal-section\">" +
+          "<div class=\"hub-modal-section-title\">Goals</div>" +
+          "<ul>";
+        for (const g of data.goals) {
+          bodyHtml += "<li>" + esc(g) + "</li>";
+        }
+        bodyHtml += "</ul></div>";
+      }
+
+      if (data.skills && data.skills.length) {
+        bodyHtml += "<div class=\"hub-modal-section\">" +
+          "<div class=\"hub-modal-section-title\">Skills (" + data.skills.length + ")</div>" +
+          "<ul>";
+        for (const s of data.skills) {
+          bodyHtml += "<li><strong>" + esc(s.display_name || s.name) + "</strong> — " + esc(s.display_description || s.description || "") + "</li>";
+        }
+        bodyHtml += "</ul></div>";
+      }
+
+      if (data.equipment_refs && data.equipment_refs.length) {
+        bodyHtml += "<div class=\"hub-modal-section\">" +
+          "<div class=\"hub-modal-section-title\">Equipment</div>" +
+          "<ul>";
+        for (const e of data.equipment_refs) {
+          bodyHtml += "<li>" + esc(e) + "</li>";
+        }
+        bodyHtml += "</ul></div>";
+      }
+
+      if (data.soul) {
+        bodyHtml += "<div class=\"hub-modal-section\">" +
+          "<div class=\"hub-modal-section-title\">Persona (SOUL.md)</div>" +
+          "<pre>" + esc(data.soul) + "</pre>" +
+          "</div>";
+      }
+
+      if (data.activated_projects && data.activated_projects.length) {
+        bodyHtml += "<div class=\"hub-modal-section\">" +
+          "<div class=\"hub-modal-section-title\">Active Projects</div>" +
+          "<ul>";
+        for (const p of data.activated_projects) {
+          bodyHtml += "<li>" + esc(p.display_name || p.name) + " (" + esc(p.id) + ")</li>";
+        }
+        bodyHtml += "</ul></div>";
+      }
+
+      hubModalBody.innerHTML = bodyHtml || "<p style=\"color:#9ca3af\">No additional details.</p>";
+
+      const isActivated = data.activated_projects && data.activated_projects.length > 0;
+      hubModalActivate.textContent = isActivated ? t("activated") : t("activate");
+      hubModalActivate.disabled = isActivated;
+
+      hubModalOverlay.classList.add("visible");
+    } catch (e) {
+      console.error("Failed to load hub template detail:", e);
+    }
+  }
+
+  function hideHubModal() {
+    hubModalOverlay.classList.remove("visible");
+    hubModalCurrent = null;
+  }
+
+  async function activateHubTemplate(name) {
+    try {
+      const res = await fetch(
+        apiUrl("/api/agent-hub/" + encodeURIComponent(name) + "/activate"),
+        { method: "POST" }
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Activation failed");
+        return;
+      }
+      await fetchHubTemplates();
+      await fetchAgents();
+      hideHubModal();
+    } catch (e) {
+      alert("Activation failed: " + (e.message || e));
+    }
+  }
+
+  function getAgentById(id) {
+    return agents.find((a) => a.id === id) || null;
+  }
+
+  function setAgentStatus(agentId, status) {
+    if (!agentId || !status) return;
+    const index = agents.findIndex((a) => a.id === agentId);
+    if (index < 0) return;
+    agents[index] = { ...agents[index], status: status };
+    if (status !== "working") {
+      delete pendingByAgent[agentId];
+    }
+    if (isAgentsViewActive()) {
+      renderMonitor();
+    }
+  }
+
+  function pickActiveAgent(preferredId) {
+    if (preferredId && getAgentById(preferredId)) return preferredId;
+    if (activeAgent && getAgentById(activeAgent)) return activeAgent;
+    if (getAgentById("main")) return "main";
+    return agents.length ? agents[0].id : null;
+  }
+
+  function updateChatHeader() {
+    if (!activeAgent) {
+      chatHeader.textContent = "";
+      updatePublishButtonState();
+      return;
+    }
+    const agent = getAgentById(activeAgent);
+    const displayName = agent ? agentDisplayName(agent) : activeAgent;
+    const avatarSrc = agent ? avatarForAgent(agent) : withAssetCacheBust("/assets/DrClaw.png");
+    const avatarFallback = agent
+      ? (
+        agent.type === "student"
+          ? withAssetCacheBust("/assets/avatars/17.png")
+          : agent.type === "equipment"
+          ? withAssetCacheBust("/assets/avatar_3.jpg")
+          : agent.type === "external"
+          ? withAssetCacheBust("/assets/avatars/1.png")
+          : withAssetCacheBust("/assets/avatars/8.png")
+      )
+      : withAssetCacheBust("/assets/DrClaw.png");
+
+    chatHeader.innerHTML = "";
+    const avatarWrap = document.createElement("div");
+    avatarWrap.id = "chat-header-avatar-wrap";
+    const avatar = document.createElement("img");
+    avatar.id = "chat-header-avatar";
+    avatar.src = avatarSrc;
+    avatar.alt = displayName + " avatar";
+    avatar.addEventListener("error", function() {
+      avatar.src = avatarFallback;
+    }, { once: true });
+    avatarWrap.appendChild(avatar);
+
+    const nameEl = document.createElement("div");
+    nameEl.id = "chat-header-name";
+    nameEl.textContent = displayName;
+
+    chatHeader.appendChild(avatarWrap);
+    chatHeader.appendChild(nameEl);
+    updatePublishButtonState();
+  }
+
+  function canPublishActiveAgent() {
+    if (!activeAgent) return false;
+    const agent = getAgentById(activeAgent);
+    if (!agent) return false;
+    if (agent.id === "main") return false;
+    if (!String(agent.id).startsWith("proj:")) return false;
+    return agent.status !== "error";
+  }
+
+  function updatePublishButtonState() {
+    if (!floatingChatPublishBtn) return;
+    const allowed = canPublishActiveAgent();
+    floatingChatPublishBtn.hidden = !allowed;
+    floatingChatPublishBtn.disabled = !allowed || publishInFlight;
+  }
+
+  function hidePublishModal() {
+    if (!publishModalOverlay) return;
+    publishModalOverlay.classList.remove("visible");
+  }
+
+  function parseCsvLine(value) {
+    return String(value || "")
+      .split(",")
+      .map(function(part) { return part.trim(); })
+      .filter(Boolean);
+  }
+
+  function renderPublishSkills(skills) {
+    if (!publishSkillsList || !publishSkillsEmpty) return;
+    publishSkillsList.innerHTML = "";
+    const normalized = Array.isArray(skills) ? skills : [];
+    if (!normalized.length) {
+      publishSkillsEmpty.hidden = false;
+      publishSkillsList.hidden = true;
+      return;
+    }
+    publishSkillsEmpty.hidden = true;
+    publishSkillsList.hidden = false;
+    for (const item of normalized) {
+      const skillName = item && item.name ? String(item.name) : "";
+      if (!skillName) continue;
+      const source = item && item.source ? String(item.source) : "";
+      let sourceLabel = source;
+      if (source === "project") sourceLabel = t("publish_skill_source_project");
+      if (source === "global") sourceLabel = t("publish_skill_source_global");
+      const li = document.createElement("li");
+      li.innerHTML = esc(skillName) + (sourceLabel ? " <span class=\"publish-skill-source\">(" + esc(sourceLabel) + ")</span>" : "");
+      publishSkillsList.appendChild(li);
+    }
+    if (!publishSkillsList.children.length) {
+      publishSkillsEmpty.hidden = false;
+      publishSkillsList.hidden = true;
+    }
+  }
+
+  async function openPublishModal() {
+    if (!canPublishActiveAgent()) {
+      alert(t("publish_not_available"));
+      updatePublishButtonState();
+      return;
+    }
+    if (!activeAgent) return;
+    const agentId = activeAgent;
+
+    publishSubmitBtn.disabled = true;
+    try {
+      await ensureAgentActive(agentId);
+      const res = await fetch(apiUrl("/api/agents/" + encodeURIComponent(agentId) + "/publish-draft"));
+      const body = await res.json().catch(function() { return {}; });
+      if (!res.ok) {
+        throw new Error(body.error || t("publish_failed"));
+      }
+      const draft = body.template || {};
+      publishNameInput.value = String(draft.name || "");
+      publishDescriptionInput.value = String(draft.description || "");
+      publishTagsInput.value = Array.isArray(draft.tags) ? draft.tags.join(", ") : "";
+      publishGoalsInput.value = Array.isArray(draft.goals) ? draft.goals.join("\n") : "";
+      publishSoulInput.value = String(draft.soul || "");
+      renderPublishSkills(draft.skills);
+      publishModalOverlay.classList.add("visible");
+      publishNameInput.focus();
+      publishNameInput.select();
+    } catch (e) {
+      alert(t("publish_failed") + ": " + (e && e.message ? e.message : String(e)));
+    } finally {
+      publishSubmitBtn.disabled = false;
+    }
+  }
+
+  async function publishToAgentHub() {
+    if (publishInFlight || !activeAgent) return;
+    if (!canPublishActiveAgent()) {
+      alert(t("publish_not_available"));
+      updatePublishButtonState();
+      return;
+    }
+
+    const name = String(publishNameInput.value || "").trim();
+    if (!name) {
+      alert(t("publish_name_required"));
+      publishNameInput.focus();
+      return;
+    }
+
+    const payload = {
+      name: name,
+      description: String(publishDescriptionInput.value || "").trim(),
+      tags: parseCsvLine(publishTagsInput.value),
+      goals: String(publishGoalsInput.value || "")
+        .split(/\r?\n/)
+        .map(function(line) { return line.trim(); })
+        .filter(Boolean),
+      soul: String(publishSoulInput.value || ""),
+    };
+
+    publishInFlight = true;
+    publishSubmitBtn.disabled = true;
+    publishCancelBtn.disabled = true;
+    updatePublishButtonState();
+    try {
+      await ensureAgentActive(activeAgent);
+      const res = await fetch(
+        "/api/agents/" + encodeURIComponent(activeAgent) + "/publish-to-hub",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+      const body = await res.json().catch(function() { return {}; });
+      if (!res.ok) {
+        throw new Error(body.error || t("publish_failed"));
+      }
+      hidePublishModal();
+      await fetchHubTemplates();
+      alert(body.message || t("publish_success"));
+    } catch (e) {
+      alert(t("publish_failed") + ": " + (e && e.message ? e.message : String(e)));
+    } finally {
+      publishInFlight = false;
+      publishSubmitBtn.disabled = false;
+      publishCancelBtn.disabled = false;
+      updatePublishButtonState();
+    }
+  }
+
+  function normalizeFileDescriptor(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const id = typeof raw.id === "string" ? raw.id.trim() : "";
+    const name = typeof raw.name === "string" && raw.name.trim() ? raw.name.trim() : "file";
+    const mime = typeof raw.mime === "string" && raw.mime.trim()
+      ? raw.mime.trim()
+      : "application/octet-stream";
+    const size = Number(raw.size || 0);
+    const downloadUrl = typeof raw.download_url === "string" ? raw.download_url.trim() : "";
+    if (!id || !downloadUrl) return null;
+    return {
+      id: id.toLowerCase(),
+      name,
+      mime,
+      size: Number.isFinite(size) && size > 0 ? Math.floor(size) : 0,
+      download_url: downloadUrl,
+    };
+  }
+
+  function normalizeFiles(raw) {
+    if (!Array.isArray(raw)) return [];
+    const out = [];
+    const seen = new Set();
+    for (const item of raw) {
+      const normalized = normalizeFileDescriptor(item);
+      if (!normalized) continue;
+      if (seen.has(normalized.id)) continue;
+      seen.add(normalized.id);
+      out.push(normalized);
+    }
+    return out;
+  }
+
+  function getPendingFiles(agentId) {
+    if (!agentId) return [];
+    const list = pendingFilesByAgent[agentId];
+    return Array.isArray(list) ? list : [];
+  }
+
+  function setPendingFiles(agentId, files) {
+    if (!agentId) return;
+    const next = Array.isArray(files) ? files.slice() : [];
+    if (next.length) pendingFilesByAgent[agentId] = next;
+    else delete pendingFilesByAgent[agentId];
+  }
+
+  function clearPendingFiles(agentId) {
+    if (!agentId) return;
+    delete pendingFilesByAgent[agentId];
+  }
+
+  function renderPendingFiles() {
+    if (!chatFilePending) return;
+    chatFilePending.innerHTML = "";
+    const pending = getPendingFiles(activeAgent);
+    for (let i = 0; i < pending.length; i++) {
+      const file = pending[i];
+      const chip = document.createElement("div");
+      chip.className = "chat-file-chip";
+      const name = document.createElement("span");
+      name.textContent = file.name + " (" + formatFileSize(file.size) + ")";
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "x";
+      remove.onclick = (function(index) {
+        return function() {
+          const current = getPendingFiles(activeAgent).slice();
+          current.splice(index, 1);
+          setPendingFiles(activeAgent, current);
+          renderPendingFiles();
+        };
+      })(i);
+      chip.appendChild(name);
+      chip.appendChild(remove);
+      chatFilePending.appendChild(chip);
+    }
+  }
+
+  function queueSelectedFiles(fileList) {
+    if (!activeAgent || !fileList || !fileList.length) return;
+    const current = getPendingFiles(activeAgent).slice();
+    const seen = new Set(current.map(function(item) {
+      return item.name + ":" + item.size + ":" + (item.lastModified || 0);
+    }));
+    for (let i = 0; i < fileList.length; i++) {
+      const f = fileList[i];
+      if (!f) continue;
+      const key = f.name + ":" + f.size + ":" + (f.lastModified || 0);
+      if (seen.has(key)) continue;
+      current.push(f);
+      seen.add(key);
+    }
+    setPendingFiles(activeAgent, current);
+    renderPendingFiles();
+  }
+
+  function renderMessages() {
+    messagesEl.innerHTML = "";
+    const msgs = history[activeAgent] || [];
+    for (const m of msgs) {
+      if (m && m.visible === false) continue;
+      const div = document.createElement("div");
+      div.className = "msg " + m.role;
+      if (m.text) {
+        const textNode = document.createElement("div");
+        textNode.textContent = m.text;
+        div.appendChild(textNode);
+      }
+      const files = Array.isArray(m.files) ? m.files : [];
+      if (files.length) {
+        const filesWrap = document.createElement("div");
+        filesWrap.className = "msg-files";
+        for (const file of files) {
+          if (!file || typeof file.download_url !== "string") continue;
+          const link = document.createElement("a");
+          link.className = "msg-file";
+          link.href = file.download_url;
+          link.target = "_blank";
+          link.rel = "noopener";
+          const label = file.name || "file";
+          const sizeLabel = formatFileSize(file.size || 0);
+          link.textContent = "File: " + label + " (" + sizeLabel + ")";
+          filesWrap.appendChild(link);
+        }
+        if (filesWrap.children.length) {
+          div.appendChild(filesWrap);
+        }
+      }
+      messagesEl.appendChild(div);
+    }
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+
+  function isAgentLikeSource(source) {
+    if (typeof source !== "string") return false;
+    if (source === "main" || source === "cron") return true;
+    return (
+      source.startsWith("proj:")
+      || source.startsWith("equip:")
+      || source.startsWith("ext:")
+      || source.startsWith("claude_code:")
+    );
+  }
+
+  function normalizeHistoryMessage(msg) {
+    const role = msg && typeof msg.role === "string" ? msg.role : "unknown";
+    const source = msg && typeof msg.source === "string" && msg.source.trim()
+      ? msg.source.trim()
+      : "user";
+    const agentLikeSource = isAgentLikeSource(source);
+    let mappedRole = "routed";
+    if (role === "user" && !agentLikeSource) {
+      mappedRole = "user";
+    } else if (source !== "user") {
+      if (
+        role === "user"
+        || role === "tool"
+        || role === "tool_call"
+        || role === "system"
+        || role === "routed"
+      ) {
+        mappedRole = "routed";
+      } else if (role === "error") {
+        mappedRole = "error";
+      } else {
+        mappedRole = "agent";
+      }
+    } else if (role === "user" || role === "agent" || role === "error" || role === "routed") {
+      mappedRole = role;
+    } else if (role === "assistant") {
+      mappedRole = "agent";
+    } else if (role === "tool" || role === "tool_call" || role === "system") {
+      mappedRole = "routed";
+    }
+    const rawText = msg ? msg.text : "";
+    let text = "";
+    if (typeof rawText === "string") {
+      text = rawText;
+    } else if (rawText == null) {
+      text = "";
+    } else {
+      try {
+        text = JSON.stringify(rawText);
+      } catch (_) {
+        text = String(rawText);
+      }
+    }
+    const visible = !msg || msg.visible !== false;
+    const files = normalizeFiles(msg ? msg.files : null);
+    return { role: mappedRole, text, source, visible, files };
+  }
+
+  async function loadAgentHistory(agentId) {
+    if (!agentId || historyLoadedByAgent[agentId]) return;
+    if (historyLoadingByAgent[agentId]) return historyLoadingByAgent[agentId];
+    historyLoadingByAgent[agentId] = (async function() {
+      try {
+        const resp = await fetch(apiUrl("/api/agents/" + encodeURIComponent(agentId) + "/history"));
+        if (!resp.ok) {
+          if (resp.status === 400 || resp.status === 404) {
+            historyLoadedByAgent[agentId] = true;
+          }
+          return;
+        }
+        const body = await resp.json();
+        const loadedMessages = Array.isArray(body.messages)
+          ? body.messages.map(normalizeHistoryMessage)
+          : [];
+        const existingMessages = history[agentId] || [];
+        history[agentId] = loadedMessages.concat(existingMessages);
+        historyLoadedByAgent[agentId] = true;
+        if (agentId === activeAgent && isAgentsViewActive()) {
+          renderMessages();
+        }
+      } catch (e) {
+        console.error("Failed to load agent history:", e);
+      } finally {
+        delete historyLoadingByAgent[agentId];
+      }
+    })();
+    return historyLoadingByAgent[agentId];
+  }
+
+  function showChatEmpty(message) {
+    chatEmpty.textContent = message;
+    chatEmpty.style.display = "flex";
+    messagesEl.style.display = "none";
+    inputBar.style.display = "none";
+    renderPendingFiles();
+    msgInput.disabled = true;
+    sendBtn.disabled = true;
+    if (chatFileBtn) chatFileBtn.disabled = true;
+  }
+
+  function showChat() {
+    chatEmpty.style.display = "none";
+    messagesEl.style.display = "flex";
+    inputBar.style.display = "flex";
+    msgInput.disabled = false;
+    sendBtn.disabled = false;
+    if (chatFileBtn) chatFileBtn.disabled = false;
+    renderPendingFiles();
+  }
+
+  function openChat(agentId) {
+    activeAgent = agentId;
+    if (!history[agentId]) history[agentId] = [];
+    const nextHash = ROUTE_AGENTS_PREFIX + encodeURIComponent(agentId);
+    if (window.location.hash !== nextHash) {
+      window.location.hash = nextHash;
+      return;
+    }
+    enterChat(agentId);
+    renderMonitor();
+  }
+
+  function enterChat(agentId) {
+    activeAgent = pickActiveAgent(agentId);
+    updateChatHeader();
+
+    if (!activeAgent) {
+      showChatEmpty("No agents available");
+      return;
+    }
+
+    if (!history[activeAgent]) history[activeAgent] = [];
+    showChat();
+    renderMessages();
+    void loadAgentHistory(activeAgent);
+    msgInput.focus();
+  }
+
+  function appendTo(agentId, msg) {
+    if (!history[agentId]) history[agentId] = [];
+    history[agentId].push(normalizeHistoryMessage(msg));
+    if (agentId === activeAgent && isAgentsViewActive()) {
+      renderMessages();
+    }
+  }
+
+  function setPending(agentId, pending) {
+    if (!agentId) return;
+    if (pending) pendingByAgent[agentId] = true;
+    else delete pendingByAgent[agentId];
+    if (isAgentsViewActive()) {
+      renderMonitor();
+    }
+  }
+
+  function debouncedFetchAgents() {
+    if (agentRefreshTimer) return;
+    agentRefreshTimer = setTimeout(function() {
+      agentRefreshTimer = null;
+      fetchAgents();
+    }, 3000);
+  }
+
+  async function fetchAgents() {
+    try {
+      const r = await fetch(apiUrl("/api/agents"));
+      if (!r.ok) return;
+      agents = await r.json();
+
+      const known = new Map(agents.map((a) => [a.id, a]));
+      Object.keys(pendingByAgent).forEach((aid) => {
+        const agent = known.get(aid);
+        if (!agent || agent.status === "error") delete pendingByAgent[aid];
+      });
+
+      if (!activeAgent || !known.has(activeAgent)) {
+        activeAgent = pickActiveAgent(activeAgent);
+      }
+      updateChatHeader();
+      if (isAgentsViewActive()) {
+        enterChat(activeAgent);
+        renderMonitor();
+      }
+      if (views.statistics && views.statistics.classList.contains("active")) {
+        loadStatistics(true).catch(function() {});
+      }
+    } catch (e) {
+      console.error("Failed to fetch agents:", e);
+    }
+  }
+
+  var _activating = {};
+  async function ensureAgentActive(agentId) {
+    const agent = getAgentById(agentId);
+    if (!agent) throw new Error("Agent not found: " + agentId);
+    if (!String(agent.id || "").startsWith("proj:")) return;
+
+    if (_activating[agentId]) return _activating[agentId];
+    _activating[agentId] = (async function() {
+      try {
+        const r = await fetch(
+          apiUrl("/api/agents/" + encodeURIComponent(agentId) + "/activate"),
+          { method: "POST" }
+        );
+        const body = await r.json().catch(function() { return {}; });
+        if (!r.ok) {
+          throw new Error(body.error || ("Failed to activate agent " + agentId));
+        }
+        await fetchAgents();
+      } finally {
+        delete _activating[agentId];
+      }
+    })();
+    return _activating[agentId];
+  }
+
+  async function send() {
+    if (!activeAgent) return;
+    const text = msgInput.value.trim();
+    const pendingFiles = getPendingFiles(activeAgent).slice();
+    if (!text && !pendingFiles.length) return;
+    msgInput.value = "";
+    await sendTextToAgent(activeAgent, text, pendingFiles);
+  }
+
+  async function uploadChatFiles(files) {
+    if (!Array.isArray(files) || !files.length) return [];
+    const form = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      form.append("files", files[i]);
+    }
+    const resp = await fetch("/api/chat/files/upload", {
+      method: "POST",
+      body: form,
+    });
+    const body = await resp.json().catch(function() { return {}; });
+    if (!resp.ok) {
+      throw new Error(
+        body && body.error
+          ? String(body.error)
+          : "File upload failed: HTTP " + resp.status
+      );
+    }
+    return normalizeFiles(body.files);
+  }
+
+  async function sendTextToAgent(agentId, text, files) {
+    const messageText = String(text == null ? "" : text).trim();
+    const pendingFiles = Array.isArray(files) ? files : [];
+    if ((!messageText && !pendingFiles.length) || !agentId) return;
+    try {
+      setPending(agentId, true);
+      if (!getAgentById(agentId)) {
+        await fetchAgents();
+      }
+      await ensureAgentActive(agentId);
+
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        throw new Error("WebSocket is disconnected");
+      }
+
+      const uploadedFiles = await uploadChatFiles(pendingFiles);
+      appendTo(agentId, { role: "user", text: messageText, files: uploadedFiles });
+      clearPendingFiles(agentId);
+      if (agentId === activeAgent) {
+        renderPendingFiles();
+      }
+
+      ws.send(JSON.stringify({
+        type: "chat",
+        agent_id: agentId,
+        text: messageText,
+        files: uploadedFiles.map(function(item) { return { id: item.id }; }),
+        metadata: { webui_language: currentLanguage },
+      }));
+      debouncedFetchAgents();
+    } catch (e) {
+      const message = e && e.message ? e.message : String(e);
+      appendTo(agentId, { role: "error", text: message });
+      if (pendingFiles.length) {
+        setPendingFiles(agentId, pendingFiles);
+        if (agentId === activeAgent) {
+          renderPendingFiles();
+        }
+      }
+      setPending(agentId, false);
+      setAgentStatus(agentId, "error");
+    }
+  }
+
+  function connectWS() {
+    setMonitorWsState("connecting");
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    ws = new WebSocket(proto + "//" + location.host + "/ws");
+
+    ws.onopen = function() {
+      setMonitorWsState("connected");
+      if (isAgentsViewActive()) {
+        renderMonitor();
+      }
+    };
+
+    ws.onmessage = function(ev) {
+      const data = JSON.parse(ev.data);
+      if (data.type === "chat") {
+        recordMonitorEvent(data.type, data.source, data.topic);
+        appendTo(data.source, { role: "agent", text: data.text, files: data.files });
+        setPending(data.source, false);
+        debouncedFetchAgents();
+      } else if (data.type === "inbound") {
+        recordMonitorEvent(data.type, data.source, data.topic);
+        const inboundMetadata = (data.metadata && typeof data.metadata === "object")
+          ? data.metadata
+          : {};
+        const delegatedResult = Boolean(inboundMetadata.delegated_result);
+        const fromTopic = typeof inboundMetadata.from_topic === "string"
+          ? inboundMetadata.from_topic
+          : "";
+        if (delegatedResult) {
+          if (fromTopic) {
+            setPending(fromTopic, false);
+          }
+          if (data.source && getAgentById(data.source)) {
+            setPending(data.source, false);
+          }
+        }
+        setPending(data.topic, true);
+        if (!isAgentLikeSource(data.source)) {
+          appendTo(data.topic, {
+            role: "user",
+            text: data.text,
+            source: data.source,
+            files: data.files,
+          });
+          return;
+        }
+        fireMessageTrail(data.source, data.topic);
+        const fromLabel = agentLabel(data.source);
+        const toLabel = agentLabel(data.topic);
+        const routedMsg = {
+          role: "routed",
+          text: fromLabel + " -> " + toLabel + ": " + data.text
+        };
+        appendTo(data.source, routedMsg);
+        if (data.topic !== data.source) {
+          appendTo(data.topic, routedMsg);
+        }
+      } else if (data.type === "tool_call") {
+        recordMonitorEvent(data.type, data.source, data.topic);
+        appendTo(data.source, {
+          role: "tool_call",
+          text: data.text,
+          source: data.source
+        });
+      } else if (data.type === "equipment_status" || data.type === "equipment_report") {
+        recordMonitorEvent(data.type, data.source, data.topic);
+        const line = "[" + data.type + "] " + data.text;
+        appendTo(data.topic, { role: "routed", text: line });
+        if (data.source !== data.topic) {
+          appendTo(data.source, { role: "routed", text: line });
+        }
+      } else if (typeof data.type === "string" && data.type.startsWith("tool_task_")) {
+        recordMonitorEvent(data.type, data.source, data.topic);
+        const target = (data.source && getAgentById(data.source)) ? data.source : data.topic;
+        if (target) {
+          appendTo(target, { role: "routed", text: "[" + data.type + "] " + data.text });
+        }
+      } else if (data.type === "error") {
+        const errorAgentId = (data.source && getAgentById(data.source)) ? data.source : activeAgent;
+        if (errorAgentId) {
+          appendTo(errorAgentId, { role: "error", text: data.text });
+          setPending(errorAgentId, false);
+          setAgentStatus(errorAgentId, "error");
+          debouncedFetchAgents();
+        }
+      }
+    };
+
+    ws.onclose = function() {
+      setMonitorWsState("disconnected");
+      setTimeout(connectWS, 2000);
+    };
+  }
+
+  const MSG_TRAIL_SVG = "data:image/svg+xml," + encodeURIComponent('<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M847.488 1008.896H61.504V117.056h491.968l294.016 229.952z" fill="#F0A221"/><path d="M956.48 901.888H170.496V10.048h556.032l230.016 226.176v665.664zM729.984 102.016v144h144l-144-144z m-104.96 81.984H286.016v57.984h339.008v-57.984z m216.96 164.992H284.992v57.984h556.992v-57.984z m0 169.984H284.992v57.984h556.992v-57.984z m0 165.056H284.992v57.984h556.992v-57.984z" fill="#F1C84C"/></svg>');
+
+  function fireMessageTrail(sourceId, targetId) {
+    if (sourceId === targetId) return;
+    var office = document.getElementById("office-area");
+    if (!office) return;
+    var srcCard = office.querySelector('.desk-card[data-id="' + sourceId + '"]');
+    var dstCard = office.querySelector('.desk-card[data-id="' + targetId + '"]');
+    if (!srcCard || !dstCard) return;
+
+    var officeRect = office.getBoundingClientRect();
+    var srcRect = srcCard.getBoundingClientRect();
+    var dstRect = dstCard.getBoundingClientRect();
+
+    var sx = srcRect.left + srcRect.width / 2 - officeRect.left + office.scrollLeft;
+    var sy = srcRect.top + srcRect.height / 2 - officeRect.top + office.scrollTop;
+    var ex = dstRect.left + dstRect.width / 2 - officeRect.left + office.scrollLeft;
+    var ey = dstRect.top + dstRect.height / 2 - officeRect.top + office.scrollTop;
+
+    var img = document.createElement("img");
+    img.src = MSG_TRAIL_SVG;
+    img.className = "msg-trail";
+    img.style.left = "0";
+    img.style.top = "0";
+    office.appendChild(img);
+
+    var mx = (sx + ex) / 2;
+    var my = Math.min(sy, ey) - 60;
+
+    var anim = img.animate([
+      { transform: "translate(" + (sx - 14) + "px," + (sy - 14) + "px) scale(0.3) rotate(-10deg)", opacity: 0 },
+      { transform: "translate(" + (mx - 14) + "px," + (my - 14) + "px) scale(1.1) rotate(2deg)", opacity: 1, offset: 0.35 },
+      { transform: "translate(" + (ex - 14) + "px," + (ey - 14) + "px) scale(1) rotate(0deg)", opacity: 1, offset: 0.85 },
+      { transform: "translate(" + (ex - 14) + "px," + (ey - 14) + "px) scale(0.5) rotate(8deg)", opacity: 0 }
+    ], { duration: 750, easing: "ease-in-out", fill: "forwards" });
+
+    anim.onfinish = function() { img.remove(); };
+  }
+
+  function agentLabel(id) {
+    const a = getAgentById(id);
+    return a ? agentDisplayName(a) : id;
+  }
+
+  function renderRoute() {
+    const route = parseRoute();
+    if (!route) return;
+
+    closeAddAgentMenu();
+    setActiveView(route.view);
+
+    if (route.view === "agents") {
+      if (route.agentId) {
+        enterChat(route.agentId);
+      }
+      renderMonitor();
+      return;
+    }
+    hidePublishModal();
+    if (route.view === "agent_hub") {
+      fetchHubTemplates();
+      return;
+    }
+    if (route.view === "config") {
+      loadConfig(false).catch(function() {});
+      return;
+    }
+    if (route.view === "skills") {
+      loadSkills(null, false).catch(function() {});
+      return;
+    }
+    if (route.view === "statistics") {
+      loadStatistics(false).catch(function() {});
+      return;
+    }
+  }
+
+  navButtons.forEach((btn) => {
+    btn.onclick = function() {
+      window.location.hash = btn.dataset.route;
+    };
+  });
+  if (langSwitchZh) {
+    langSwitchZh.onclick = function() {
+      setLanguage("zh");
+    };
+  }
+  if (langSwitchEn) {
+    langSwitchEn.onclick = function() {
+      setLanguage("en");
+    };
+  }
+
+  sendBtn.onclick = function() {
+    void send();
+  };
+  if (chatFileBtn) {
+    chatFileBtn.onclick = function() {
+      if (chatFileInput) {
+        chatFileInput.value = "";
+        chatFileInput.click();
+      }
+    };
+  }
+  if (chatFileInput) {
+    chatFileInput.onchange = function() {
+      const files = chatFileInput.files;
+      if (files && files.length) {
+        queueSelectedFiles(files);
+      }
+      chatFileInput.value = "";
+    };
+  }
+  msgInput.onkeydown = function(e) {
+    if (e.key === "Enter") void send();
+  };
+  if (addAgentBtn) {
+    addAgentBtn.onclick = function(e) {
+      e.stopPropagation();
+      toggleAddAgentMenu();
+    };
+  }
+  if (addAgentFromScratchBtn) {
+    addAgentFromScratchBtn.onclick = function() {
+      void startAgentFromScratchFlow();
+    };
+  }
+  if (addAgentImportHubBtn) {
+    addAgentImportHubBtn.onclick = function() {
+      navigateToHubInactiveSection();
+    };
+  }
+  document.addEventListener("click", function(e) {
+    if (!addAgentMenu || addAgentMenu.hidden) return;
+    if (!(e.target instanceof Node)) return;
+    if ((addAgentBtn && addAgentBtn.contains(e.target)) || addAgentMenu.contains(e.target)) return;
+    closeAddAgentMenu();
+  });
+  document.addEventListener("keydown", function(e) {
+    if (e.key === "Escape") {
+      closeAddAgentMenu();
+      hidePublishModal();
+    }
+  });
+  if (floatingChatPublishBtn) {
+    floatingChatPublishBtn.onclick = function() {
+      void openPublishModal();
+    };
+  }
+  configReloadBtn.onclick = function() {
+    loadConfig(true).catch(function() {});
+  };
+  configSaveBtn.onclick = function() {
+    saveConfig();
+  };
+  configForm.onsubmit = function(e) {
+    e.preventDefault();
+    saveConfig();
+  };
+  skillsUploadBtn.onclick = function() {
+    skillsUploadInput.value = "";
+    skillsUploadInput.click();
+  };
+  skillsUploadInput.onchange = function() {
+    const file = skillsUploadInput.files && skillsUploadInput.files[0];
+    if (file) uploadSkill(file);
+  };
+  skillModalClose.onclick = hideSkillModal;
+  skillModalOverlay.onclick = function(e) {
+    if (e.target === skillModalOverlay) hideSkillModal();
+  };
+  hubModalClose.onclick = hideHubModal;
+  hubModalOverlay.onclick = function(e) {
+    if (e.target === hubModalOverlay) hideHubModal();
+  };
+  hubModalActivate.onclick = function() {
+    if (hubModalCurrent && !hubModalActivate.disabled) {
+      activateHubTemplate(hubModalCurrent.name);
+    }
+  };
+  if (publishModalClose) {
+    publishModalClose.onclick = function() {
+      hidePublishModal();
+    };
+  }
+  if (publishCancelBtn) {
+    publishCancelBtn.onclick = function() {
+      hidePublishModal();
+    };
+  }
+  if (publishModalOverlay) {
+    publishModalOverlay.onclick = function(e) {
+      if (e.target === publishModalOverlay) hidePublishModal();
+    };
+  }
+  if (publishSubmitBtn) {
+    publishSubmitBtn.onclick = function() {
+      void publishToAgentHub();
+    };
+  }
+  if (publishGoalsInput) {
+    publishGoalsInput.onkeydown = function(e) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        void publishToAgentHub();
+      }
+    };
+  }
+
+  window.addEventListener("hashchange", renderRoute);
+
+  applyLanguage(currentLanguage);
+  fetchAgents();
+  connectWS();
+  renderRoute();
+})();
+</script>
+</body>
+</html>

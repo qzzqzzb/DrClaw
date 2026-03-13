@@ -1,0 +1,10 @@
+name: Earth Science
+description: An Earth Scientist
+i18n:
+  zh:
+    name: 地球科学虾
+    description: 一只地球科学科研虾
+avatar: /assets/avatars/11.png
+tags: []
+goals: []
+equipment_refs: []

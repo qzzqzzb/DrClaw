@@ -1,0 +1,10 @@
+name: InternAgent
+description: ''
+i18n:
+  zh:
+    name: InternAgent虾
+    description: 使用InternAgent1.5完成闭环科研任务
+avatar: /assets/avatars/3.png
+tags: []
+goals: []
+equipment_refs: []

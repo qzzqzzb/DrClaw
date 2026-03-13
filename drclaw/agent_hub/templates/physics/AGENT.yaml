@@ -1,0 +1,10 @@
+name: physics
+description: A cutting-edge theoretical physicist
+i18n:
+  zh:
+    name: 虾顿
+    description: 一只前沿物理科研虾
+avatar: /assets/avatars/0.png
+tags: []
+goals: []
+equipment_refs: []

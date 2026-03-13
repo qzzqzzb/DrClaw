@@ -1,0 +1,59 @@
+# ================================
+# nsfc-code 默认配置（Single Source of Truth for version）
+# ================================
+
+skill_info:
+  name: nsfc-code
+  version: 1.0.0
+  description: "根据 NSFC 标书正文内容，结合申请代码推荐库，为你给出 5 组申请代码1/2（主/次）推荐与理由；输出到 NSFC-CODE-vYYYYMMDDHHmm.md（只读，不修改标书）"
+  category: writing
+  author: "Bensz Conan"
+
+parameters:
+  input_paths:
+    type: array
+    required: true
+    description: 待分析的标书正文来源（文件或目录路径；常见为 `projects/NSFC_Young/` 或 `main.tex`）
+  preferred_prefixes:
+    type: array
+    required: false
+    default: []
+    description: 可选：限定候选代码的学部前缀（例如仅在你确定学科门类时填 `["A"]` 或 `["A","F"]`），避免跨学科噪声
+  output_dir:
+    type: string
+    required: false
+    default: ""
+    description: 输出目录；为空则使用当前工作目录
+  output_filename:
+    type: string
+    required: false
+    default: ""
+    description: 输出文件名；为空则使用 `NSFC-CODE-vYYYYMMDDHHmm.md`
+  top_k_candidates:
+    type: integer
+    required: false
+    default: 50
+    description: 候选代码粗排数量（用于 AI 二次筛选）
+
+guardrails:
+  # 只读：不允许修改标书内容（tex/bib/cls/sty 等）。
+  # 允许写入：根层交付文件、隐藏工作区、测试/计划产物。
+  allowed_write_globs:
+    - "NSFC-CODE-*.md"
+    - ".nsfc-code/**"
+    - "skills/nsfc-code/tests/**"
+    - "skills/nsfc-code/plans/**"
+  forbidden_write_globs:
+    - "**/*.tex"
+    - "**/*.bib"
+    - "**/*.cls"
+    - "**/*.sty"
+
+references:
+  overrides_toml: "skills/nsfc-code/references/nsfc_code_recommend.toml"
+
+output_contract:
+  # 隐藏工作区（中间文件，每次运行独立隔离）
+  work_dir: ".nsfc-code/v{ts}/"
+  # 最终交付（工作目录根层，文件名按分钟级时间戳）
+  final_report: "NSFC-CODE-v{ts}.md"

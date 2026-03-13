@@ -1,0 +1,206 @@
+# ═══════════════════════════════════════════════════════════════════════
+# nsfc-justification-writer 配置文件
+# ═══════════════════════════════════════════════════════════════════════
+# 本文件是 nsfc-justification-writer 的配置单一真相来源（Single Source of Truth）
+# 修改配置时，请优先编辑本文件，而非 scripts/core/config_loader.py
+# ═══════════════════════════════════════════════════════════════════════
+
+skill_info:
+  name: nsfc-justification-writer
+  version: 1.0.0
+  category: writing
+  author: "Bensz Conan"
+
+# 写作导向（可配置）
+# - theoretical：理论创新导向（默认）
+# - mixed：理论 + 应用混合导向
+# - engineering：工程/应用导向
+style:
+  mode: theoretical
+
+parameters:
+  project_root:
+    type: string
+    required: true
+    description: 项目根目录（如 projects/NSFC_Young 或你的标书项目路径）
+  output_mode:
+    type: string
+    required: false
+    default: apply
+    allowed_values: [preview, apply]
+    description: preview 仅输出建议文本；apply 则写入目标 .tex 文件（如由平台/工具支持）
+  word_count_target:
+    type: integer
+    required: false
+    default: 9000
+    description: 目标字数（中文字符数，不含 LaTeX 命令/注释；兜底值，优先从用户意图/信息表/学科预设解析）
+  word_count_tolerance:
+    type: integer
+    required: false
+    default: 800
+    description: 允许偏差范围（兜底值；若用户给出区间/±范围则优先使用）
+
+targets:
+  justification_tex: extraTex/1.1.立项依据.tex
+  related_tex:
+    research_content: extraTex/2.1.研究内容.tex
+    research_foundation: extraTex/3.1.研究基础.tex
+  bib_globs:
+    - references/*.bib
+    - references/**/*.bib
+
+workspace:
+  # runs/ 属于运行时产物：统一放在 tests/_artifacts/ 下（测试/运行产物集中收口）
+  runs_dir: tests/_artifacts/runs
+
+limits:
+  # 文件大小限制（用于决定是否启用“流式分块”读取；避免一次性加载超大文件造成峰值内存）
+  max_file_size_mb: 5
+
+  # AI 输入字符限制（用于语义分析、术语一致性等）
+  ai_max_input_chars: 20000
+
+  # 写作教练预览字符数（用于快速展示当前状态/阶段判定）
+  writing_coach_preview_chars: 3000
+
+  # 字数目标范围限制（用于解析用户意图/信息表时的安全夹紧）
+  word_target:
+    min: 100
+    max: 20000
+
+ai:
+  enabled: true
+  tier2_chunk_size: 12000
+  tier2_max_chunks: 20
+  # 运行时缓存统一放在 tests/_artifacts/ 下（测试/运行产物集中收口）
+  cache_dir: tests/_artifacts/cache/ai
+
+prompts:
+  tier2_diagnostic: assets/prompts/tier2_diagnostic.txt
+  review_suggestions: assets/prompts/review_suggestions.txt
+  writing_coach: assets/prompts/writing_coach.txt
+
+references:
+  # 默认严格：发现缺失 bibkey 的 \\cite{...} 直接拒绝写入（防止幻觉引用）
+  allow_missing_citations: false
+
+structure:
+  # 仅作为"推荐模板"，不再用作严格标题匹配的硬性规则（标题是形式，内容维度是本质）
+  recommended_subsubsections:
+    - 研究背景
+    - 国内外研究现状
+    - 现有研究的局限性
+    - 研究切入点
+  # 默认 false：允许用户改写标题用词（结构检查不再机械匹配标题字符串）
+  strict_title_match: false
+  # strict_title_match=false 时启用"模糊标题匹配"（必要时会调用 AI 在候选标题中做语义匹配）
+  min_title_similarity: 0.6
+  min_subsubsection_count: 4
+  # 启用"内容维度覆盖检查"（不依赖标题用词；AI 不可用时回退启发式）
+  enable_dimension_coverage_check: true
+
+guardrails:
+  allowed_write_files:
+    - extraTex/1.1.立项依据.tex
+  forbidden_write_files:
+    - main.tex
+    - extraTex/@config.tex
+  forbidden_write_globs:
+    - "**/*.cls"
+    - "**/*.sty"
+
+quality:
+  # 高风险示例（用于快速提示；不穷举同义词变体）
+  high_risk_examples:
+    - 国际领先
+    - 国内首次
+    - 世界领先
+    - 填补空白
+  # 默认 false：示例词命中仅警告，不作为阻断（避免"玩文字游戏"）
+  strict_mode: false
+  # 启用 AI 语义判断（识别"可能引起评审不适的表述"）
+  enable_ai_judgment: true
+  ai_judgment_mode: semantic  # semantic | keyword（兜底）
+  avoid_commands:
+    - "\\section"
+    - "\\subsection"
+    - "\\input"
+    - "\\include"
+
+# 第三方约束（“瘦身提质”写作指标）：
+# - 目标场景：NSFC 正文原则不超过 30 页，其中立项依据建议 6-10 页（推荐 6-8 页）
+# - 本处仅做“诊断+预警”，不作为写入阻断（避免被历史遗留内容卡死）
+constraints:
+  page_limit:
+    min: 6
+    max: 10
+    recommended: [6, 8]
+    warning_threshold: 9
+    # 经验估算：小四/1.5 倍行距下，约 1000 个中文字符 ≈ 1 页（仅用于预警，不代表最终排版）
+    chars_per_page: 1000
+  word_count:
+    min: 8000
+    max: 10000
+  references:
+    min: 30
+    max: 50
+  opening:
+    cjk_chars: 300
+    _note: "开篇 300 字尽量直击核心：领域卡点/局限 -> 为什么难 -> 本项目的突破式切入（仅做启发式检查）"
+
+word_count:
+  target: 9000
+  tolerance: 800
+  _note: "9000 字为兜底值；实际目标字数优先从用户意图/信息表/学科预设动态解析"
+  # cjk_only: 仅剔除注释后统计 CJK 字符数（默认）
+  # cjk_strip_commands: 粗剔除命令/数学环境/类代码环境后统计（更接近"正文字符数"的估计）
+  mode: cjk_only
+
+terminology:
+  # auto: AI 可用则叠加 AI 语义检查，否则仅 legacy 规则矩阵
+  # ai:   强制尝试 AI（不可用则回退）
+  # legacy: 仅使用硬编码维度/别名组
+  mode: auto
+  enable_ai_semantic_check: true
+  ai_mode: auto  # auto | semantic_only | legacy_only
+  ai:
+    enabled: true
+    max_chars: 20000
+  dimensions:
+    研究对象:
+      研究对象: ["患者", "病例", "受试者", "样本"]
+    指标:
+      准确率: ["准确率", "精确度"]
+    术语:
+      深度学习: ["深度学习", "DL"]
+
+writing_coach:
+  # 默认启用 AI 阶段推断（AI 不可用时自动回退到硬编码规则）
+  enable_ai_stage_inference: true
+  ai_inference_mode: auto  # auto | ai_only | fallback
+  fallback_rules:
+    draft_threshold_ratio: 0.4
+    draft_min_chars: 600
+
+# systematic-literature-review 集成配置
+slr_integration:
+  # 启用 systematic-literature-review 目录检测
+  enabled: true
+
+  # 标记文件夹名称（用于识别 systematic-literature-review 生成的目录）
+  marker_folder: ".systematic-literature-review"
+
+  # 只读访问保护（禁止写入 systematic-literature-review 生成的目录）
+  read_only: true
+
+  # 自动验证引用一致性
+  validate_citations: true
+
+  # 允许的文件模式（用于过滤 .tex 和 .bib 文件）
+  tex_patterns:
+    - "*.tex"
+    - "*_review.tex"
+  bib_patterns:
+    - "*.bib"
+    - "*_参考文献.bib"
+    - "references.bib"

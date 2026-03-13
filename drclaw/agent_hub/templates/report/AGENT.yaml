@@ -1,0 +1,11 @@
+name: report
+description: Generate scientific reports, visualizations, schematics, and presentation
+  slides.
+i18n:
+  zh:
+    name: 虾报告
+    description: 生成科研报告、可视化图表、示意图和演示文稿
+avatar: /assets/avatars/12.png
+tags: []
+goals: []
+equipment_refs: []

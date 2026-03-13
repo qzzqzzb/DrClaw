@@ -1,0 +1,35 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+nanobot/
+nanoclaw/
+
+# Dolt database files (added by bd init)
+.dolt/
+*.db
+
+# Internal project management
+.beads/
+implementation_records/
+
+# macOS
+.DS_Store
+
+# Claude Code
+.claude/
+CLAUDE.md
+**/CLAUDE.md
+AGENTS.md
+CHANGELOG.md
+
+# Tauri desktop app
+desktop/node_modules/
+desktop/src-tauri/target/
+desktop/dist/

@@ -1,0 +1,11 @@
+name: paper tracking
+description: Track, search, and monitor academic papers across arXiv, PubMed, and
+  other scientific literature sources.
+i18n:
+  zh:
+    name: 虾看论文
+    description: 在 arXiv、PubMed 等来源上追踪并检索学术论文
+avatar: /assets/avatars/17.png
+tags: []
+goals: []
+equipment_refs: []

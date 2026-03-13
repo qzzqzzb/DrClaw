@@ -1,0 +1,10 @@
+name: SSH
+description: Connet to remote servers via SSH, useful for experiments.
+i18n:
+  zh:
+    name: 虾跑实验
+    description: SSH连接远程服务器运行实验、查看结果
+avatar: /assets/avatars/12.png
+tags: []
+goals: []
+equipment_refs: []

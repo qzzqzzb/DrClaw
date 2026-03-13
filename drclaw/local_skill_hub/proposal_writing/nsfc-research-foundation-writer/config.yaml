@@ -1,0 +1,49 @@
+# ================================
+# nsfc-research-foundation-writer 默认配置
+# ================================
+
+skill_info:
+  name: nsfc-research-foundation-writer
+  version: 0.1.1
+  # template_year: 移除年份限制，使技能适用于不同年份的 NSFC 模板
+  category: writing
+  description: "为 NSFC 正文“（三）研究基础”写作/重构，并同步编排“工作条件/研究风险应对”（不适用：非标书正文场景）"
+  author: "Bensz Conan"
+
+parameters:
+  project_root:
+    type: string
+    required: true
+    description: 项目根目录（如 projects/NSFC_Young 或你的标书项目路径）
+  output_mode:
+    type: string
+    required: false
+    default: apply
+    allowed_values: [preview, apply]
+    # preview: 预览模式，只生成内容不写入文件
+    # apply: 应用模式，将生成的内容写入 extraTex 文件
+
+targets:
+  foundation_tex: extraTex/3.1.研究基础.tex
+  conditions_tex: extraTex/3.2.工作条件.tex
+
+guardrails:
+  allowed_write_files:
+    - extraTex/3.1.研究基础.tex
+    - extraTex/3.2.工作条件.tex
+  forbidden_write_files:
+    - main.tex
+    - extraTex/@config.tex
+  forbidden_write_globs:
+    - "**/*.cls"
+    - "**/*.sty"
+
+quality_contract:
+  foundation_must_cover:
+    - 与本项目相关的研究积累（证据链）
+    - 已取得的阶段性成果（可核验）
+    - 可行性要点（理论/技术/团队/条件）
+    - 研究风险与应对措施（显式写出）
+  conditions_must_cover:
+    - 已具备条件（平台/数据/样本/算力/团队/合规）
+    - 尚缺条件与解决途径（时间/预算/合作/采购/替代方案）
