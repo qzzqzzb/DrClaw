@@ -504,8 +504,9 @@ drclaw launchd uninstall
 
 1. Create a Feishu app at https://open.feishu.cn/app, enable **Bot**
 2. Add permissions: `im:message` (send), `im:message.p2p_msg:readonly` (receive)
-3. Add event `im.message.receive_v1`, choose **Long Connection** mode
-4. Configure `~/.drclaw/config.json`:
+3. `drclaw daemon -f feishu`
+4. Add event `im.message.receive_v1`, choose **Long Connection** mode
+5. Configure `~/.drclaw/config.json`:
 
 ```json
 {
@@ -520,7 +521,6 @@ drclaw launchd uninstall
 }
 ```
 
-5. `drclaw daemon -f feishu`
 6. Publish app and send a message to the bot
 
 **Troubleshooting:**
