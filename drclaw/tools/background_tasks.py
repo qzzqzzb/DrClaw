@@ -290,8 +290,9 @@ class BackgroundToolTaskManager:
         """String returned into the model's tool-result channel on detach."""
         return (
             f"Tool call is running in background (task_id={rec.task_id}, tool={rec.tool_name}). "
-            "Use list_background_tool_tasks / get_background_tool_task_status to track progress "
-            "and cancel_background_tool_task to stop it if needed."
+            "IMPORTANT: Do NOT poll for status. You will receive an automatic notification "
+            "when the task completes. End your current response now and wait for the "
+            "completion callback. Use cancel_background_tool_task only if you need to abort."
         )
 
     def _prune_terminal(self) -> None:

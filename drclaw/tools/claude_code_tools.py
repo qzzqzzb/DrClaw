@@ -91,7 +91,11 @@ class UseClaudeCodeTool(Tool):
                 cwd=cwd,
                 max_budget_usd=max_budget_usd,
                 close_on_complete=close_on_complete,
-                notify_on_completion=not await_result,
+                # Always enable notifications: even with await_result=true, the
+                # tool call may be detached to background by the agent loop's
+                # timeout.  Without notifications the agent has no way to learn
+                # the session finished except by polling.
+                notify_on_completion=True,
             )
         except Exception as exc:
             return f"Error: failed to start Claude Code session: {exc}"

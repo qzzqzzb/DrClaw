@@ -97,6 +97,7 @@ class AgentRegistry:
             default_permission_mode=cc.permission_mode,
             default_allowed_tools=list(cc.allowed_tools),
             default_env=dict(cc.env) if cc.env else None,
+            log_dir=config.data_path / "debug" / "claude_code",
         )
 
     def start_main(self, debug_logger: DebugLogger | None = None) -> AgentHandle:

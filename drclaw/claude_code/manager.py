@@ -6,7 +6,8 @@ import asyncio
 import json
 import secrets
 from datetime import datetime, timezone
-from typing import Any
+from pathlib import Path
+from typing import IO, Any
 
 from loguru import logger
 
@@ -30,6 +31,7 @@ class ClaudeCodeSessionManager:
         default_allowed_tools: list[str] | None = None,
         default_env: dict[str, str] | None = None,
         client_factory: Any = None,
+        log_dir: Path | None = None,
     ) -> None:
         self.bus = bus
         self.max_concurrent = max_concurrent
@@ -42,10 +44,38 @@ class ClaudeCodeSessionManager:
         ]
         self.default_env = default_env or {}
         self._client_factory = client_factory
+        self._log_dir = log_dir
         self._sessions: dict[str, ClaudeCodeSession] = {}
         self._clients: dict[str, Any] = {}
+        self._session_logs: dict[str, IO[str]] = {}
         self._lock = asyncio.Lock()
         self._idle_timers: dict[str, asyncio.Task[None]] = {}
+
+    # ------------------------------------------------------------------
+    # Session log files
+    # ------------------------------------------------------------------
+
+    def _open_session_log(self, session_id: str) -> None:
+        if self._log_dir is None:
+            return
+        self._log_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
+        path = self._log_dir / f"cc_{ts}_{session_id}.jsonl"
+        self._session_logs[session_id] = open(path, "a", encoding="utf-8")  # noqa: SIM115
+        logger.info("CC session {} log: {}", session_id, path)
+
+    def _write_session_log(self, session_id: str, entry: dict[str, Any]) -> None:
+        f = self._session_logs.get(session_id)
+        if f is None:
+            return
+        entry.setdefault("ts", datetime.now(tz=timezone.utc).isoformat())
+        f.write(json.dumps(entry, ensure_ascii=False, default=str) + "\n")
+        f.flush()
+
+    def _close_session_log(self, session_id: str) -> None:
+        f = self._session_logs.pop(session_id, None)
+        if f is not None:
+            f.close()
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -83,6 +113,18 @@ class ClaudeCodeSessionManager:
             )
             self._sessions[session_id] = session
 
+        logger.info(
+            "CC session {} started | caller={} cwd={} instruction={!r}",
+            session_id, caller_agent_id, cwd, instruction[:120],
+        )
+        self._open_session_log(session_id)
+        self._write_session_log(session_id, {
+            "type": "session_start",
+            "session_id": session_id,
+            "caller": caller_agent_id,
+            "cwd": cwd,
+            "instruction": instruction,
+        })
         session.task = asyncio.create_task(
             self._run_session(
                 session_id=session_id,
@@ -117,6 +159,7 @@ class ClaudeCodeSessionManager:
 
         self._cancel_idle_timer(session_id)
         session.mark_running()
+        logger.info("CC session {} follow-up message: {!r}", session_id, message[:120])
 
         client = self._clients.get(session_id)
         if client is None:
@@ -134,9 +177,11 @@ class ClaudeCodeSessionManager:
 
         if close_after or session.close_on_complete:
             session.mark_terminal("succeeded", "Completed")
+            logger.info("CC session {} completed after follow-up", session_id)
             await self._publish_outbound(session, "Session completed")
             await self._cleanup_client(session_id)
         else:
+            logger.info("CC session {} idle after follow-up", session_id)
             self._start_idle_timer(session_id)
         return session
 
@@ -153,6 +198,7 @@ class ClaudeCodeSessionManager:
 
         self._cancel_idle_timer(session_id)
         terminal = _normalize_terminal(status)
+        logger.info("CC session {} closed by caller | status={}", session_id, terminal)
         session.mark_terminal(terminal, f"Closed with status: {terminal}")
         await self._publish_outbound(session, f"Session {terminal}")
         await self._cleanup_client(session_id)
@@ -218,6 +264,7 @@ class ClaudeCodeSessionManager:
         try:
             from claude_agent_sdk import ClaudeAgentOptions  # noqa: F401
         except ImportError:
+            logger.error("CC session {} failed: claude-agent-sdk not installed", session_id)
             session.mark_terminal(
                 "failed",
                 "claude-agent-sdk not installed. Run: pip install claude-agent-sdk",
@@ -229,24 +276,46 @@ class ClaudeCodeSessionManager:
                 )
             return
 
+        def _on_stderr(line: str) -> None:
+            logger.debug("CC session {} stderr: {}", session_id, line.rstrip())
+            self._write_session_log(session_id, {"type": "stderr", "text": line.rstrip()})
+
         options = ClaudeAgentOptions(
             cwd=cwd,
             permission_mode=self.default_permission_mode,
             allowed_tools=list(self.default_allowed_tools),
             max_budget_usd=max_budget_usd,
             max_turns=max_turns,
+            stderr=_on_stderr,
             **({"env": dict(self.default_env)} if self.default_env else {}),
         )
 
         try:
             client = self._create_client(options)
+            logger.debug("CC session {} connecting to SDK...", session_id)
+            self._write_session_log(session_id, {
+                "type": "connecting",
+                "permission_mode": self.default_permission_mode,
+                "allowed_tools": list(self.default_allowed_tools),
+                "max_budget_usd": max_budget_usd,
+                "max_turns": max_turns,
+            })
             await client.connect(instruction)
             self._clients[session_id] = client
+            logger.info("CC session {} connected, draining response...", session_id)
+            self._write_session_log(session_id, {"type": "connected"})
 
             start_msg = f"Claude Code session started: {instruction[:100]}"
             await self._publish_outbound(session, start_msg)
             await self._drain_response(session_id, client)
+            self._write_session_log(session_id, {
+                "type": "drain_complete",
+                "status": session.status,
+                "num_turns": session.num_turns,
+            })
         except asyncio.CancelledError:
+            logger.info("CC session {} cancelled", session_id)
+            self._write_session_log(session_id, {"type": "cancelled"})
             session.mark_terminal("cancelled", "Session cancelled")
             await self._publish_outbound(session, "Session cancelled")
             if notify_on_completion:
@@ -255,6 +324,9 @@ class ClaudeCodeSessionManager:
             raise
         except Exception as exc:
             logger.exception("Claude Code session {} crashed", session_id)
+            self._write_session_log(session_id, {
+                "type": "error", "error": str(exc),
+            })
             session.mark_terminal("failed", f"Session crashed: {exc}")
             await self._publish_outbound(session, session.status_message)
             if notify_on_completion:
@@ -264,11 +336,19 @@ class ClaudeCodeSessionManager:
 
         if session.close_on_complete:
             session.mark_terminal("succeeded", "Completed (close_on_complete)")
+            logger.info(
+                "CC session {} completed (close_on_complete) | cost=${:.4f} turns={}",
+                session_id, session.total_cost_usd or 0, session.num_turns,
+            )
             await self._publish_outbound(session, "Session completed")
             if notify_on_completion:
                 await self._notify_caller(session, notify_channel, notify_chat_id)
             await self._cleanup_client(session_id)
         else:
+            logger.info(
+                "CC session {} idle (awaiting follow-up) | cost=${:.4f} turns={}",
+                session_id, session.total_cost_usd or 0, session.num_turns,
+            )
             self._start_idle_timer(session_id)
 
     async def _drain_response(self, session_id: str, client: Any) -> None:
@@ -278,25 +358,41 @@ class ClaudeCodeSessionManager:
         except ImportError:
             return
 
+        msg_count = 0
         async for msg in client.receive_response():
+            msg_count += 1
             entry = _message_to_log_entry(msg)
             session.execution_log.append(entry)
             session.last_activity_at = datetime.now(tz=timezone.utc)
+            self._write_session_log(session_id, _message_to_full_log_entry(msg))
 
             if isinstance(msg, AssistantMessage):
                 for block in msg.content:
                     if isinstance(block, TextBlock):
+                        logger.debug(
+                            "CC session {} assistant text: {!r}",
+                            session_id, block.text[:200],
+                        )
                         await self._publish_outbound(session, block.text)
                     elif isinstance(block, ToolUseBlock):
                         inp = json.dumps(
                             block.input, ensure_ascii=False, default=str,
                         )[:200]
+                        logger.debug(
+                            "CC session {} tool_use: {}({})",
+                            session_id, block.name, inp,
+                        )
                         await self._publish_outbound(
                             session, f"[tool] {block.name}({inp})",
                         )
 
             if isinstance(msg, ResultMessage):
                 session.total_cost_usd = msg.total_cost_usd
+                logger.info(
+                    "CC session {} result | cost=${:.4f} turns={} is_error={} msgs_received={}",
+                    session_id, msg.total_cost_usd or 0, msg.num_turns,
+                    msg.is_error, msg_count,
+                )
                 if not session.close_on_complete:
                     session.mark_idle(
                         cost=msg.total_cost_usd,
@@ -312,6 +408,16 @@ class ClaudeCodeSessionManager:
         return ClaudeSDKClient(options=options)
 
     async def _cleanup_client(self, session_id: str) -> None:
+        session = self._sessions.get(session_id)
+        if session is not None:
+            self._write_session_log(session_id, {
+                "type": "session_end",
+                "status": session.status,
+                "status_message": session.status_message,
+                "total_cost_usd": session.total_cost_usd,
+                "num_turns": session.num_turns,
+            })
+        self._close_session_log(session_id)
         client = self._clients.pop(session_id, None)
         if client is None:
             return
@@ -343,7 +449,7 @@ class ClaudeCodeSessionManager:
         session = self._sessions.get(session_id)
         if session is None or session.status != "idle":
             return
-        logger.info("Claude Code session {} idle timeout", session_id)
+        logger.info("CC session {} idle timeout — auto-closing", session_id)
         session.mark_terminal("succeeded", "Idle timeout — auto-closed")
         await self._publish_outbound(session, "Session auto-closed (idle timeout)")
         await self._cleanup_client(session_id)
@@ -395,6 +501,10 @@ class ClaudeCodeSessionManager:
         if self.bus is None:
             return
         summary = _session_summary(session)
+        logger.info(
+            "CC session {} notifying caller {} | {}",
+            session.session_id, session.caller_agent_id, summary,
+        )
         await self.bus.publish_inbound(
             InboundMessage(
                 channel=channel,
@@ -416,6 +526,51 @@ class ClaudeCodeSessionManager:
 # ------------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------------
+
+
+def _message_to_full_log_entry(msg: Any) -> dict[str, Any]:
+    """Convert an SDK message to a full (untruncated) JSON-serializable log entry."""
+    entry: dict[str, Any] = {"type": type(msg).__name__}
+    try:
+        from claude_agent_sdk import (
+            AssistantMessage,
+            ResultMessage,
+            TextBlock,
+            ToolResultBlock,
+            ToolUseBlock,
+            UserMessage,
+        )
+
+        if isinstance(msg, AssistantMessage):
+            blocks: list[dict[str, Any]] = []
+            for b in msg.content:
+                if isinstance(b, TextBlock):
+                    blocks.append({"type": "text", "text": b.text})
+                elif isinstance(b, ToolUseBlock):
+                    blocks.append({"type": "tool_use", "name": b.name, "input": b.input})
+                elif isinstance(b, ToolResultBlock):
+                    blocks.append({
+                        "type": "tool_result",
+                        "tool_use_id": b.tool_use_id,
+                        "content": str(b.content) if b.content else None,
+                    })
+                else:
+                    blocks.append({"type": type(b).__name__})
+            entry["content"] = blocks
+        elif isinstance(msg, UserMessage):
+            entry["content"] = str(msg.content)
+        elif isinstance(msg, ResultMessage):
+            entry["num_turns"] = msg.num_turns
+            entry["total_cost_usd"] = msg.total_cost_usd
+            entry["is_error"] = msg.is_error
+            entry["result"] = msg.result
+            entry["duration_ms"] = msg.duration_ms
+            entry["stop_reason"] = msg.stop_reason
+        else:
+            entry["raw"] = str(msg)
+    except ImportError:
+        entry["raw"] = str(msg)
+    return entry
 
 
 def _message_to_log_entry(msg: Any) -> dict[str, Any]:

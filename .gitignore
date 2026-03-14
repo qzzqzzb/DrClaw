@@ -10,6 +10,7 @@ build/
 
 nanobot/
 nanoclaw/
+openclaw-claude-code-skill/
 
 # Dolt database files (added by bd init)
 .dolt/
@@ -18,6 +19,7 @@ nanoclaw/
 # Internal project management
 .beads/
 implementation_records/
+tmp/
 
 # macOS
 .DS_Store
