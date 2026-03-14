@@ -4239,7 +4239,7 @@ body {
     };
   }
   msgInput.onkeydown = function(e) {
-    if (e.key === "Enter") void send();
+    if (e.key === "Enter" && !e.isComposing && e.keyCode !== 229) void send();
   };
   if (addAgentBtn) {
     addAgentBtn.onclick = function(e) {
