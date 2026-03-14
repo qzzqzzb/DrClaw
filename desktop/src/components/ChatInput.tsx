@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { useChatStore } from "../stores/chatStore"
 import type { ChatMessage } from "../lib/types"
 
@@ -10,6 +10,7 @@ interface Props {
 
 export function ChatInput({ onSend }: Props) {
   const [text, setText] = useState("")
+  const composingRef = useRef(false)
   const activeAgentId = useChatStore((s) => s.activeAgentId)
   const connectionStatus = useChatStore((s) => s.connectionStatus)
   const disabled = connectionStatus !== "connected" || !activeAgentId
@@ -35,8 +36,14 @@ export function ChatInput({ onSend }: Props) {
         type="text"
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onCompositionStart={() => { composingRef.current = true }}
+        onCompositionEnd={() => {
+          // Chrome fires compositionend BEFORE the final keydown,
+          // so delay clearing the flag to the next tick.
+          setTimeout(() => { composingRef.current = false }, 0)
+        }}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+          if (e.key === "Enter" && !e.shiftKey && !composingRef.current) {
             e.preventDefault()
             send()
           }
