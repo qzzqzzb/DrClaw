@@ -196,7 +196,13 @@ class MainAgent:
             )
         )
         registry.register(ListProjectsTool(self.project_store))
-        registry.register(CreateProjectTool(self.project_store, on_create=on_project_create))
+        registry.register(
+            CreateProjectTool(
+                self.project_store,
+                projects_dir=data_dir / "projects",
+                on_create=on_project_create,
+            )
+        )
         registry.register(SetEnvVarTool(self.env_store))
         registry.register(UnsetEnvVarTool(self.env_store))
         registry.register(ListEnvVarsTool(self.env_store))

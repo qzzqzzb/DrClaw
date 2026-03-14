@@ -123,6 +123,33 @@ async def test_main_agent_create_project(
 
 
 @pytest.mark.asyncio
+async def test_main_agent_create_project_with_soul_append(
+    main_agent: MainAgent, mock_provider: MockProvider
+) -> None:
+    mock_provider.queue(
+        make_tool_response(
+            "create_project",
+            {
+                "name": "PersonaQuantum",
+                "description": "quantum research",
+                "soul_append": "## Project Direction\n- Prioritize reproducibility.",
+            },
+        ),
+        make_text_response("Created project PersonaQuantum."),
+    )
+    result = await main_agent.process_direct("create a project called PersonaQuantum")
+    assert "PersonaQuantum" in result
+
+    projects = main_agent.project_store.list_projects()
+    assert len(projects) == 1
+    project = projects[0]
+    soul_file = main_agent.config.data_path / "projects" / project.id / "workspace" / "SOUL.md"
+    soul = soul_file.read_text(encoding="utf-8")
+    assert "## Project Direction" in soul
+    assert "Prioritize reproducibility." in soul
+
+
+@pytest.mark.asyncio
 async def test_main_agent_create_project_calls_on_create_callback(
     config: DrClawConfig, mock_provider: MockProvider,
 ) -> None:

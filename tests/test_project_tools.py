@@ -107,6 +107,25 @@ class TestCreateProjectTool:
         assert "Minimal" in result
         assert len(store.list_projects()) == 1
 
+    async def test_create_project_appends_to_soul(self, tmp_path: Path) -> None:
+        store = JsonProjectStore(tmp_path)
+        tool = CreateProjectTool(store, projects_dir=tmp_path / "projects")
+
+        result = await tool.execute(
+            {
+                "name": "PersonaTest",
+                "soul_append": "## Project Overrides\n- Use concise bullet points.",
+            }
+        )
+
+        assert "PersonaTest" in result
+        projects = store.list_projects()
+        assert len(projects) == 1
+        soul_file = tmp_path / "projects" / projects[0].id / "workspace" / "SOUL.md"
+        content = soul_file.read_text(encoding="utf-8")
+        assert "## Project Overrides" in content
+        assert "Use concise bullet points." in content
+
     async def test_create_project_duplicate_name_returns_error(self, tmp_path: Path) -> None:
         store = JsonProjectStore(tmp_path)
         store.create_project("Dupe")
