@@ -35,9 +35,11 @@ app = typer.Typer(name="drclaw", help="DrClaw — research lab agent framework."
 projects_app = typer.Typer(help="Manage research projects.")
 cron_app = typer.Typer(help="Manage scheduled cron jobs.")
 launchd_app = typer.Typer(help="Manage macOS LaunchAgent for tray mode.")
+provider_app = typer.Typer(help="Manage LLM providers.")
 app.add_typer(projects_app, name="projects")
 app.add_typer(cron_app, name="cron")
 app.add_typer(launchd_app, name="launchd")
+app.add_typer(provider_app, name="provider")
 
 console = Console()
 
@@ -55,7 +57,20 @@ def _ensure_macos_or_exit() -> None:
 
 
 def _make_provider(config: DrClawConfig):  # noqa: ANN201
-    """Build a LiteLLMProvider from config. Lazy import to keep lightweight commands fast."""
+    """Build an LLM provider from config. Routes OAuth providers to dedicated implementations."""
+    from drclaw.providers.registry import find_by_model
+
+    spec = find_by_model(config.provider.model)
+
+    if spec and spec.name == "openai_codex":
+        from drclaw.providers.openai_codex_provider import OpenAICodexProvider
+
+        return OpenAICodexProvider(
+            config.provider,
+            max_tokens=config.agent.max_tokens,
+            temperature=config.agent.temperature,
+        )
+
     from drclaw.providers.litellm_provider import LiteLLMProvider
 
     return LiteLLMProvider(
@@ -768,3 +783,90 @@ def _chat_project(
     agent = ProjectAgent(config, provider, proj, debug_logger=debug_logger)
     result = asyncio.run(agent.process_direct(message))
     console.print(result)
+
+
+# ============================================================================
+# OAuth Login
+# ============================================================================
+
+_LOGIN_HANDLERS: dict[str, callable] = {}
+
+
+def _register_login(name: str):
+    def decorator(fn):
+        _LOGIN_HANDLERS[name] = fn
+        return fn
+    return decorator
+
+
+@provider_app.command("login")
+def provider_login(
+    provider: str = typer.Argument(
+        ..., help="OAuth provider (e.g. 'openai-codex', 'github-copilot')"
+    ),
+) -> None:
+    """Authenticate with an OAuth provider."""
+    from drclaw.providers.registry import PROVIDERS
+
+    key = provider.replace("-", "_")
+    spec = next((s for s in PROVIDERS if s.name == key and s.is_oauth), None)
+    if not spec:
+        names = ", ".join(s.name.replace("_", "-") for s in PROVIDERS if s.is_oauth)
+        console.print(f"[red]Unknown OAuth provider: {provider}[/red]  Supported: {names}")
+        raise typer.Exit(1)
+
+    handler = _LOGIN_HANDLERS.get(spec.name)
+    if not handler:
+        console.print(f"[red]Login not implemented for {spec.label}[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"OAuth Login — {spec.label}\n")
+    handler()
+
+
+@_register_login("openai_codex")
+def _login_openai_codex() -> None:
+    try:
+        from oauth_cli_kit import get_token, login_oauth_interactive
+
+        token = None
+        try:
+            token = get_token()
+        except Exception:
+            pass
+        if not (token and token.access):
+            console.print("[cyan]Starting interactive OAuth login...[/cyan]\n")
+            token = login_oauth_interactive(
+                print_fn=lambda s: console.print(s),
+                prompt_fn=lambda s: typer.prompt(s),
+            )
+        if not (token and token.access):
+            console.print("[red]Authentication failed[/red]")
+            raise typer.Exit(1)
+        console.print(
+            f"[green]Authenticated with OpenAI Codex[/green]  [dim]{token.account_id}[/dim]"
+        )
+    except ImportError:
+        console.print("[red]oauth_cli_kit not installed. Run: pip install oauth-cli-kit[/red]")
+        raise typer.Exit(1)
+
+
+@_register_login("github_copilot")
+def _login_github_copilot() -> None:
+    console.print("[cyan]Starting GitHub Copilot device flow...[/cyan]\n")
+
+    async def _trigger():
+        from litellm import acompletion
+
+        await acompletion(
+            model="github_copilot/gpt-4o",
+            messages=[{"role": "user", "content": "hi"}],
+            max_tokens=1,
+        )
+
+    try:
+        asyncio.run(_trigger())
+        console.print("[green]Authenticated with GitHub Copilot[/green]")
+    except Exception as e:
+        console.print(f"[red]Authentication error: {e}[/red]")
+        raise typer.Exit(1)
