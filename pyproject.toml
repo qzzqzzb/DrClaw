@@ -2,7 +2,7 @@
 name = "drclaw"
 version = "0.2.1"
 description = "A lightweight, project-centric AI agent framework for research workflows"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
     {name = "drclaw contributors"}
