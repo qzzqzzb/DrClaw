@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { useChatStore } from "../stores/chatStore"
 import type { ChatMessage } from "../lib/types"
 
@@ -10,6 +10,7 @@ interface Props {
 
 export function ChatInput({ onSend }: Props) {
   const [text, setText] = useState("")
+  const composingRef = useRef(false)
   const activeAgentId = useChatStore((s) => s.activeAgentId)
   const connectionStatus = useChatStore((s) => s.connectionStatus)
   const disabled = connectionStatus !== "connected" || !activeAgentId
@@ -35,8 +36,10 @@ export function ChatInput({ onSend }: Props) {
         type="text"
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onCompositionStart={() => { composingRef.current = true }}
+        onCompositionEnd={() => { composingRef.current = false }}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
+          if (e.key === "Enter" && !e.shiftKey && !composingRef.current) {
             e.preventDefault()
             send()
           }
