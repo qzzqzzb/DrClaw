@@ -347,6 +347,71 @@ InternClaw是什么？
 - 出于安全考虑，当前版本只建议和本地部署的外部智能体通信
 - 当前版本不支持鉴权机制
 
+### OAuth LLM 提供商（OpenAI Codex / GitHub Copilot）
+
+除 API Key 之外，InternClaw 支持通过 OAuth 登录 OpenAI Codex 和 GitHub Copilot，无需提供 API 密钥。
+
+**完整步骤（从零开始）：**
+
+#### 1. 初始化
+
+```bash
+drclaw onboard
+```
+
+#### 2. OAuth 登录
+
+根据你使用的提供商选择一个：
+
+```bash
+# OpenAI Codex
+drclaw provider login openai-codex
+
+# GitHub Copilot
+drclaw provider login github-copilot
+```
+
+OpenAI Codex 会启动浏览器交互式 OAuth 流程；GitHub Copilot 使用设备码流程（device flow），终端会显示一个验证码和链接。
+
+#### 3. 修改配置
+
+编辑 `~/.drclaw/config.json`，将 `model` 设为 OAuth 提供商的模型，`api_key` 留空：
+
+```json
+{
+  "provider": {
+    "model": "openai-codex/gpt-5.1-codex",
+    "api_key": ""
+  }
+}
+```
+
+GitHub Copilot 示例：
+
+```json
+{
+  "provider": {
+    "model": "github_copilot/gpt-4o",
+    "api_key": ""
+  }
+}
+```
+
+#### 4. 启动
+
+```bash
+# 命令行聊天
+drclaw chat
+
+# 或 macOS 托盘模式
+drclaw tray
+
+# 或 daemon 模式
+drclaw daemon -f web
+```
+
+登录后的 OAuth token 会被缓存，后续启动自动使用，无需重复登录。
+
 ## 使用
 
 ```bash
