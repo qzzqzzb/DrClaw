@@ -311,6 +311,63 @@ async def test_bus_notification_on_completion() -> None:
 
 
 @pytest.mark.asyncio
+async def test_default_env_passed_to_options() -> None:
+    """Verify that default_env is forwarded to ClaudeAgentOptions."""
+    captured_opts: list[Any] = []
+    mock_client = _make_mock_client()
+
+    def capturing_factory(opts: Any) -> Any:
+        captured_opts.append(opts)
+        return mock_client
+
+    env = {"ANTHROPIC_BASE_URL": "https://example.com", "MY_VAR": "val"}
+    manager = ClaudeCodeSessionManager(
+        max_concurrent=4,
+        idle_timeout_seconds=300,
+        default_env=env,
+        client_factory=capturing_factory,
+    )
+
+    session = await manager.start_session(
+        instruction="test env",
+        caller_agent_id="proj:p1",
+        cwd="/tmp",
+        close_on_complete=True,
+    )
+    await asyncio.wait_for(session.done_event.wait(), timeout=5)
+
+    assert len(captured_opts) == 1
+    opts = captured_opts[0]
+    assert opts.env == {"ANTHROPIC_BASE_URL": "https://example.com", "MY_VAR": "val"}
+
+
+@pytest.mark.asyncio
+async def test_no_env_when_empty() -> None:
+    """When default_env is empty, env should not be set on options."""
+    captured_opts: list[Any] = []
+    mock_client = _make_mock_client()
+
+    def capturing_factory(opts: Any) -> Any:
+        captured_opts.append(opts)
+        return mock_client
+
+    manager = _make_manager(client_factory=capturing_factory)
+
+    session = await manager.start_session(
+        instruction="test no env",
+        caller_agent_id="proj:p1",
+        cwd="/tmp",
+        close_on_complete=True,
+    )
+    await asyncio.wait_for(session.done_event.wait(), timeout=5)
+
+    assert len(captured_opts) == 1
+    opts = captured_opts[0]
+    # When no env is configured, env should be empty
+    assert opts.env == {}
+
+
+@pytest.mark.asyncio
 async def test_stop_all_cancels_sessions() -> None:
     never_done = asyncio.Event()
 

@@ -111,6 +111,7 @@ class ClaudeCodeConfig(BaseModel):
     )
     max_concurrent_sessions: int = Field(default=4, ge=1, le=16)
     idle_timeout_seconds: int = Field(default=300, ge=30)
+    env: dict[str, str] = Field(default_factory=dict)
 
 
 class ExternalAgentConfig(BaseModel):

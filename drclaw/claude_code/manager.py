@@ -28,6 +28,7 @@ class ClaudeCodeSessionManager:
         default_max_turns: int | None = None,
         default_permission_mode: str = "acceptEdits",
         default_allowed_tools: list[str] | None = None,
+        default_env: dict[str, str] | None = None,
         client_factory: Any = None,
     ) -> None:
         self.bus = bus
@@ -39,6 +40,7 @@ class ClaudeCodeSessionManager:
         self.default_allowed_tools = default_allowed_tools or [
             "Read", "Write", "Edit", "Bash",
         ]
+        self.default_env = default_env or {}
         self._client_factory = client_factory
         self._sessions: dict[str, ClaudeCodeSession] = {}
         self._clients: dict[str, Any] = {}
@@ -233,6 +235,7 @@ class ClaudeCodeSessionManager:
             allowed_tools=list(self.default_allowed_tools),
             max_budget_usd=max_budget_usd,
             max_turns=max_turns,
+            **({"env": dict(self.default_env)} if self.default_env else {}),
         )
 
         try:
