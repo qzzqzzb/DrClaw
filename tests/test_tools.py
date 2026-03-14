@@ -563,6 +563,11 @@ class TestExecTool:
         result = await tool.execute({"command": "cat ../secret"})
         assert "blocked" in result.lower()
 
+    async def test_restrict_to_workspace_allows_dev_null(self, workspace: Path) -> None:
+        tool = ExecTool(restrict_to_workspace=True, working_dir=workspace)
+        result = await tool.execute({"command": f"ls {workspace} 2>/dev/null"})
+        assert "blocked" not in result.lower()
+
     async def test_output_truncated_at_10k(self) -> None:
         tool = ExecTool()
         result = await tool.execute({"command": "python3 -c \"print('x' * 20000)\""})
