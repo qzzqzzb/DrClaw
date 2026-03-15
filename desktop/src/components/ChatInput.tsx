@@ -4,6 +4,8 @@ import type { ChatMessage } from "../lib/types"
 
 let inputMsgId = 0
 
+const IME_DEBOUNCE_MS = 200
+
 interface Props {
   onSend: (agentId: string, text: string) => void
 }
@@ -12,7 +14,7 @@ export function ChatInput({ onSend }: Props) {
   const [text, setText] = useState("")
   const textRef = useRef(text)
   const inputRef = useRef<HTMLInputElement>(null)
-  const composingRef = useRef(false)
+  const lastCompositionEndRef = useRef(0)
   const activeAgentId = useChatStore((s) => s.activeAgentId)
   const connectionStatus = useChatStore((s) => s.connectionStatus)
   const disabled = connectionStatus !== "connected" || !activeAgentId
@@ -34,30 +36,31 @@ export function ChatInput({ onSend }: Props) {
     setText("")
   }, [activeAgentId, onSend])
 
-  // Attach native DOM listeners to bypass React's synthetic event system,
-  // which can reorder composition and keydown events.
   useEffect(() => {
     const el = inputRef.current
     if (!el) return
 
-    const onCompositionStart = () => { composingRef.current = true }
     const onCompositionEnd = () => {
-      // Use setTimeout so the flag is still true when the keydown
-      // that follows compositionend (in Chrome) is processed.
-      setTimeout(() => { composingRef.current = false }, 0)
+      lastCompositionEndRef.current = Date.now()
     }
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey && !composingRef.current && !e.isComposing && e.keyCode !== 229) {
-        e.preventDefault()
-        send()
-      }
+      if (e.key !== "Enter" || e.shiftKey) return
+
+      // Block send if any IME signal is active
+      if (e.isComposing || e.keyCode === 229) return
+
+      // Block send if compositionend just fired (within debounce window).
+      // This catches Chrome/Electron where compositionend precedes keydown
+      // and isComposing is already false.
+      if (Date.now() - lastCompositionEndRef.current < IME_DEBOUNCE_MS) return
+
+      e.preventDefault()
+      send()
     }
 
-    el.addEventListener("compositionstart", onCompositionStart)
     el.addEventListener("compositionend", onCompositionEnd)
     el.addEventListener("keydown", onKeyDown)
     return () => {
-      el.removeEventListener("compositionstart", onCompositionStart)
       el.removeEventListener("compositionend", onCompositionEnd)
       el.removeEventListener("keydown", onKeyDown)
     }
