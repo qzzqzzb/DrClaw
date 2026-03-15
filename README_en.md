@@ -20,7 +20,7 @@ Build your lab:
 bash <(curl -fsSL https://raw.githubusercontent.com/qzzqzzb/drclaw/main/install.sh)
 ```
 
-This installs `uv` (if needed), clones the repo to `~/.drclaw-src/`, installs core dependencies, adds macOS tray support when relevant, and symlinks `drclaw` to `~/.local/bin/`. Re-running updates an existing installation.
+This installs `uv` (if needed), clones the repo to `~/.drclaw-src/`, installs core dependencies, adds macOS tray support when relevant, and symlinks `drclaw` to `~/.local/bin/`.
 
 After installing, [configure your LLM provider](#configuration) to get started.
 
