@@ -2,7 +2,7 @@
 name = "drclaw"
 version = "0.2.1"
 description = "A lightweight, project-centric AI agent framework for research workflows"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [
     {name = "drclaw contributors"}
@@ -19,6 +19,11 @@ dependencies = [
     "aiohttp>=3.9.0,<4.0.0",
     "lark-oapi>=1.5.0,<2.0.0",
     "claude-agent-sdk>=0.1.40,<1.0.0",
+    "pystray>=0.19.5,<1.0.0",
+    "pillow>=10.0.0,<12.0.0",
+    "resvg-py>=0.2.6,<1.0.0",
+    "oauth-cli-kit>=0.1.3,<1.0.0",
+    "httpx>=0.28.0,<1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -27,11 +32,6 @@ dev = [
     "pytest-asyncio>=1.3.0,<2.0.0",
     "ruff>=0.1.0",
     "mypy>=1.0.0",
-]
-tray = [
-    "pystray>=0.19.5,<1.0.0",
-    "pillow>=10.0.0,<12.0.0",
-    "resvg-py>=0.2.6,<1.0.0",
 ]
 
 [project.scripts]
@@ -46,7 +46,7 @@ packages = ["drclaw"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W"]
@@ -54,3 +54,9 @@ select = ["E", "F", "I", "N", "W"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+]

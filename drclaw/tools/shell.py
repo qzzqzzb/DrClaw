@@ -11,6 +11,12 @@ from drclaw.tools.base import Tool
 
 _MAX_OUTPUT = 10_000
 
+# Paths that should never trigger the workspace sandbox guard (e.g. /dev/null
+# used in redirections like ``2>/dev/null``).
+_SAFE_DEV_PATHS = frozenset(
+    Path(p) for p in ("/dev/null", "/dev/zero", "/dev/urandom", "/dev/random", "/dev/stdin", "/dev/stdout", "/dev/stderr")
+)
+
 
 class ExecTool(Tool):
     """Tool to execute shell commands with safety guards."""
@@ -166,7 +172,7 @@ class ExecTool(Tool):
                     p = Path(raw.strip()).resolve()
                 except Exception:
                     continue
-                if p.is_absolute() and cwd_path not in p.parents and p != cwd_path:
+                if p.is_absolute() and p not in _SAFE_DEV_PATHS and cwd_path not in p.parents and p != cwd_path:
                     return "Error: Command blocked by safety guard (path outside working dir)"
 
         return None

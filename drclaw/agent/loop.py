@@ -149,11 +149,17 @@ class AgentLoop:
     # ------------------------------------------------------------------
 
     async def _run_agent_loop(
-        self, messages: list[dict[str, Any]]
+        self,
+        messages: list[dict[str, Any]],
+        *,
+        on_new_messages: Callable[[list[dict[str, Any]]], None] | None = None,
     ) -> tuple[str | None, list[str], list[dict[str, Any]], bool]:
         """Run the LLM ↔ tool loop until the model stops calling tools.
 
         Returns (final_content, tools_used, messages, had_error).
+
+        *on_new_messages* is called after each iteration with the new messages
+        appended during that iteration, enabling incremental session persistence.
         """
         tool_defs = self.tool_registry.get_definitions() or None
         tools_used: list[str] = []
@@ -162,6 +168,7 @@ class AgentLoop:
         iteration = 0
 
         while iteration < self.max_iterations:
+            mark = len(messages)
             if self.debug_logger:
                 self.debug_logger.log_request(iteration, messages, tool_defs)
             response = await self.provider.complete(messages, tools=tool_defs)
@@ -254,15 +261,21 @@ class AgentLoop:
                     self.context_builder.add_tool_result(messages, tc.id, tc.name, result)
                     tools_used.append(tc.name)
 
+                if on_new_messages:
+                    on_new_messages(messages[mark:])
                 iteration += 1
                 continue
 
             # No tool calls — model is done
+            mark = len(messages)
             self.context_builder.add_assistant_message(messages, response.content)
             final_content = response.content
+            if on_new_messages:
+                on_new_messages(messages[mark:])
             break
 
         if iteration >= self.max_iterations and final_content is None:
+            mark = len(messages)
             messages.append({"role": "system", "content": _MAX_ITERATIONS_FINALIZE_NOTICE})
             if self.debug_logger:
                 self.debug_logger.log_request(iteration, messages, None)
@@ -292,6 +305,8 @@ class AgentLoop:
                 )
 
             self.context_builder.add_assistant_message(messages, final_content)
+            if on_new_messages:
+                on_new_messages(messages[mark:])
 
         return final_content, tools_used, messages, had_error
 
@@ -390,19 +405,24 @@ class AgentLoop:
         if attachments:
             user_message["attachments"] = attachments
         session.messages.append(cast(Message, user_message))
+        self.session_manager.save(session)
+
+        def _persist_incremental(new_msgs: list[dict[str, Any]]) -> None:
+            """Incrementally persist new messages from the agent loop."""
+            self._save_turn(
+                session,
+                new_msgs,
+                0,
+                inbound_source=source_text,
+                agent_source=self.agent_id,
+            )
+            self.session_manager.save(session)
 
         self._last_turn_had_error = False
-        final_content, _tools_used, all_msgs, had_error = await self._run_agent_loop(messages)
-        self._last_turn_had_error = had_error
-
-        self._save_turn(
-            session,
-            all_msgs,
-            skip,
-            inbound_source=source_text,
-            agent_source=self.agent_id,
+        final_content, _tools_used, all_msgs, had_error = await self._run_agent_loop(
+            messages, on_new_messages=_persist_incremental,
         )
-        self.session_manager.save(session)
+        self._last_turn_had_error = had_error
 
         await self._maybe_consolidate(session)
 

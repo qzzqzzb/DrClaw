@@ -154,6 +154,12 @@ class TrayRuntime:
             pystray.MenuItem("Exit", self.on_exit),
         )
         icon = pystray.Icon("drclaw", image, "DrClaw", menu)
+
+        def _sigint_handler(signum, frame) -> None:  # noqa: ANN001, ARG005
+            self.stop_daemon()
+            icon.stop()
+
+        signal.signal(signal.SIGINT, _sigint_handler)
         icon.run()
 
 

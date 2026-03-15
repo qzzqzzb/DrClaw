@@ -1353,23 +1353,30 @@ body {
 
 #chat-input-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
 }
 
-#chat-input-row input {
+#chat-input-row textarea {
   flex: 1;
   padding: 9px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
   font-size: 13px;
+  font-family: inherit;
   outline: none;
+  resize: none;
+  overflow-y: auto;
+  min-height: 38px;
+  max-height: 150px;
+  line-height: 1.4;
 }
 
-#chat-input-row input:focus { border-color: #89b4fa; }
+#chat-input-row textarea:focus { border-color: #89b4fa; }
 
 #chat-input-row button {
   margin-left: 8px;
-  padding: 9px 14px;
+  padding: 0 14px;
+  height: 38px;
   background: #89b4fa;
   color: #1e1e2e;
   border: none;
@@ -1383,11 +1390,10 @@ body {
 #chat-input-row button:disabled { opacity: 0.5; cursor: default; }
 
 #chat-file-btn {
-  width: 36px;
-  min-width: 36px;
+  width: 38px;
+  min-width: 38px;
   padding: 0;
   font-size: 18px;
-  line-height: 1;
 }
 
 #chat-empty {
@@ -1634,9 +1640,9 @@ body {
           <div id="input-bar">
             <div id="chat-file-pending"></div>
             <div id="chat-input-row">
-              <button id="chat-file-btn" type="button" title="Attach files" data-i18n-title="attach_file" disabled>+</button>
               <input id="chat-file-input" type="file" multiple style="display:none">
-              <input id="msg-input" type="text" placeholder="Type a message..." data-i18n-placeholder="type_message" disabled>
+              <textarea id="msg-input" rows="1" placeholder="Type a message..." data-i18n-placeholder="type_message" disabled></textarea>
+              <button id="chat-file-btn" type="button" title="Attach files" data-i18n-title="attach_file" disabled>+</button>
               <button id="send-btn" data-i18n="send" disabled>Send</button>
             </div>
           </div>
@@ -3963,6 +3969,7 @@ body {
     const pendingFiles = getPendingFiles(activeAgent).slice();
     if (!text && !pendingFiles.length) return;
     msgInput.value = "";
+    msgInput.style.height = "auto";
     await sendTextToAgent(activeAgent, text, pendingFiles);
   }
 
@@ -4239,7 +4246,14 @@ body {
     };
   }
   msgInput.onkeydown = function(e) {
-    if (e.key === "Enter") void send();
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing && e.keyCode !== 229) {
+      e.preventDefault();
+      void send();
+    }
+  };
+  msgInput.oninput = function() {
+    msgInput.style.height = "auto";
+    msgInput.style.height = msgInput.scrollHeight + "px";
   };
   if (addAgentBtn) {
     addAgentBtn.onclick = function(e) {

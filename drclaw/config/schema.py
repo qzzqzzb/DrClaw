@@ -111,6 +111,15 @@ class ClaudeCodeConfig(BaseModel):
     )
     max_concurrent_sessions: int = Field(default=4, ge=1, le=16)
     idle_timeout_seconds: int = Field(default=300, ge=30)
+    env: dict[str, str] = Field(default_factory=dict)
+    # Retry config: transient SDK/IPC errors are retried with exponential back-off.
+    max_retries: int = Field(default=3, ge=0, le=10)
+    retry_base_delay_seconds: float = Field(default=1.0, ge=0.1)
+    retry_max_delay_seconds: float = Field(default=30.0, ge=1.0)
+    # MCP bridge: DrClaw tools to expose inside Claude Code sessions.
+    # Empty list (default) keeps current behaviour — no extra tools exposed.
+    # Use ["*"] to expose all non-claude_code tools, or list specific tool names.
+    expose_tools_to_sessions: list[str] = Field(default_factory=list)
 
 
 class ExternalAgentConfig(BaseModel):
@@ -128,7 +137,10 @@ class ExternalAgentConfig(BaseModel):
 class DrClawConfig(BaseModel):
     """Root configuration for DrClaw."""
 
-    provider: ProviderConfig = ProviderConfig()
+    providers: dict[str, ProviderConfig] = Field(
+        default_factory=lambda: {"default": ProviderConfig()}
+    )
+    active_provider: str = "default"
     agent: AgentConfig = AgentConfig()
     data_dir: str = "~/.drclaw"
     daemon: DaemonConfig = DaemonConfig()
@@ -138,6 +150,13 @@ class DrClawConfig(BaseModel):
     env: EnvConfig = EnvConfig()
     claude_code: ClaudeCodeConfig = ClaudeCodeConfig()
     external_agents: list[ExternalAgentConfig] = Field(default_factory=list)
+
+    @property
+    def active_provider_config(self) -> ProviderConfig:
+        cfg = self.providers.get(self.active_provider)
+        if cfg is None:
+            raise ValueError(f"active_provider {self.active_provider!r} not found in providers")
+        return cfg
 
     @property
     def data_path(self) -> Path:

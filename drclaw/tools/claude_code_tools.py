@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 from drclaw.tools.base import Tool
@@ -21,10 +22,12 @@ class UseClaudeCodeTool(Tool):
         *,
         caller_agent_id: str,
         default_cwd: str,
+        mcp_tools_provider: Callable[[], list[Tool]] | None = None,
     ) -> None:
         self._manager = manager
         self._caller_agent_id = caller_agent_id
         self._default_cwd = default_cwd
+        self._mcp_tools_provider = mcp_tools_provider
 
     @property
     def name(self) -> str:
@@ -84,6 +87,7 @@ class UseClaudeCodeTool(Tool):
         max_budget_usd: float | None = params.get("max_budget_usd")
         close_on_complete: bool = params.get("close_on_complete", False)
 
+        mcp_tools = self._mcp_tools_provider() if self._mcp_tools_provider else None
         try:
             session = await self._manager.start_session(
                 instruction=instruction,
@@ -91,7 +95,12 @@ class UseClaudeCodeTool(Tool):
                 cwd=cwd,
                 max_budget_usd=max_budget_usd,
                 close_on_complete=close_on_complete,
-                notify_on_completion=not await_result,
+                # Always enable notifications: even with await_result=true, the
+                # tool call may be detached to background by the agent loop's
+                # timeout.  Without notifications the agent has no way to learn
+                # the session finished except by polling.
+                notify_on_completion=True,
+                mcp_tools=mcp_tools,
             )
         except Exception as exc:
             return f"Error: failed to start Claude Code session: {exc}"

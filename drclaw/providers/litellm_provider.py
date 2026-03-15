@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 from typing import Any
@@ -71,8 +72,30 @@ class LiteLLMProvider(LLMProvider):
         if tools:
             kwargs["tools"] = tools
 
-        response = await litellm.acompletion(**kwargs)
-        return self._parse_response(response)
+        last_exc: Exception | None = None
+        for attempt in range(3):
+            try:
+                response = await litellm.acompletion(**kwargs)
+                return self._parse_response(response)
+            except Exception as exc:
+                err_msg = str(exc).lower()
+                retryable = (
+                    "server disconnected" in err_msg
+                    or "connection reset" in err_msg
+                    or "connection closed" in err_msg
+                    or "broken pipe" in err_msg
+                    or "timed out" in err_msg
+                )
+                if not retryable or attempt == 2:
+                    raise
+                last_exc = exc
+                wait = 1.0 * (attempt + 1)
+                logger.warning(
+                    "LLM call failed (attempt {}/3), retrying in {:.0f}s: {}",
+                    attempt + 1, wait, exc,
+                )
+                await asyncio.sleep(wait)
+        raise last_exc  # unreachable, but keeps type checker happy
 
     def _parse_response(self, response: Any) -> LLMResponse:
         choice = response.choices[0]

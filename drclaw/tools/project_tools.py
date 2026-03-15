@@ -74,9 +74,11 @@ class CreateProjectTool(Tool):
     def __init__(
         self,
         project_store: ProjectStore,
+        projects_dir: Path | None = None,
         on_create: Callable[[Project], Any] | None = None,
     ) -> None:
         self._store = project_store
+        self._projects_dir = projects_dir
         self._on_create = on_create
 
     @property
@@ -94,17 +96,63 @@ class CreateProjectTool(Tool):
             "properties": {
                 "name": {"type": "string", "description": "Project name"},
                 "description": {"type": "string", "description": "Optional project description"},
+                "soul_append": {
+                    "type": "string",
+                    "description": (
+                        "Optional content to append to the new student agent SOUL.md "
+                        "immediately after project creation."
+                    ),
+                },
             },
             "required": ["name"],
         }
 
+    def _resolve_projects_dir(self) -> Path | None:
+        if self._projects_dir is not None:
+            return self._projects_dir
+        data_dir = getattr(self._store, "_data_dir", None)
+        if isinstance(data_dir, Path):
+            return data_dir / "projects"
+        return None
+
+    def _append_to_project_soul(self, project_id: str, soul_append: str) -> None:
+        projects_dir = self._resolve_projects_dir()
+        if projects_dir is None:
+            raise RuntimeError("projects_dir is not configured")
+
+        soul_path = projects_dir / project_id / "workspace" / "SOUL.md"
+        soul_path.parent.mkdir(parents=True, exist_ok=True)
+
+        snippet = soul_append.strip("\n")
+        if not snippet.strip():
+            return
+
+        existing = ""
+        if soul_path.exists():
+            existing = soul_path.read_text(encoding="utf-8")
+        base = existing.rstrip("\n")
+        separator = "\n\n" if base else ""
+        soul_path.write_text(base + separator + snippet + "\n", encoding="utf-8")
+
     async def execute(self, params: dict[str, Any]) -> str:
         name: str = params["name"]
         description: str = params.get("description", "")
+        soul_append_raw = params.get("soul_append")
+        soul_append = str(soul_append_raw) if soul_append_raw is not None else ""
         try:
             project = self._store.create_project(name, description)
         except Exception as exc:
             return f"Error: {exc}"
+
+        if soul_append.strip():
+            try:
+                self._append_to_project_soul(project.id, soul_append)
+            except Exception as exc:
+                return (
+                    f"Created project {name!r} with ID {project.id!r}, "
+                    f"but failed to append SOUL.md content: {exc}"
+                )
+
         if self._on_create is not None:
             try:
                 self._on_create(project)
