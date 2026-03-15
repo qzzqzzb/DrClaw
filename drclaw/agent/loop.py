@@ -86,6 +86,7 @@ class AgentLoop:
         self._running = False
         self._processing_lock = asyncio.Lock()
         self._current_inbound: InboundMessage | None = None
+        self._active_session: Session | None = None
         self._last_turn_had_error = False
 
     @property
@@ -383,50 +384,54 @@ class AgentLoop:
         serialize externally (see ``_dispatch``).
         """
         session = self.session_manager.load(session_key)
-        history_raw = cast(list[dict[str, Any]], session.get_history(max_messages=self.max_history))
-        history = self._sanitize_history_for_model(history_raw)
-        messages = self.context_builder.build_messages(
-            history,
-            content,
-            channel,
-            chat_id,
-            runtime_metadata=runtime_metadata,
-        )
-        skip = len(messages)
-
-        # The user message lives inside `messages` (at skip-1) but that
-        # region is excluded from _save_turn by the skip offset.  Append
-        # it to the session explicitly so it persists across turns.
-        source_text = source.strip() if isinstance(source, str) else "user"
-        if not source_text:
-            source_text = "user"
-        user_message: dict[str, Any] = {"role": "user", "content": content, "source": source_text}
-        attachments = self._runtime_attachments(runtime_metadata)
-        if attachments:
-            user_message["attachments"] = attachments
-        session.messages.append(cast(Message, user_message))
-        self.session_manager.save(session)
-
-        def _persist_incremental(new_msgs: list[dict[str, Any]]) -> None:
-            """Incrementally persist new messages from the agent loop."""
-            self._save_turn(
-                session,
-                new_msgs,
-                0,
-                inbound_source=source_text,
-                agent_source=self.agent_id,
+        self._active_session = session
+        try:
+            history_raw = cast(list[dict[str, Any]], session.get_history(max_messages=self.max_history))
+            history = self._sanitize_history_for_model(history_raw)
+            messages = self.context_builder.build_messages(
+                history,
+                content,
+                channel,
+                chat_id,
+                runtime_metadata=runtime_metadata,
             )
+            skip = len(messages)
+
+            # The user message lives inside `messages` (at skip-1) but that
+            # region is excluded from _save_turn by the skip offset.  Append
+            # it to the session explicitly so it persists across turns.
+            source_text = source.strip() if isinstance(source, str) else "user"
+            if not source_text:
+                source_text = "user"
+            user_message: dict[str, Any] = {"role": "user", "content": content, "source": source_text}
+            attachments = self._runtime_attachments(runtime_metadata)
+            if attachments:
+                user_message["attachments"] = attachments
+            session.messages.append(cast(Message, user_message))
             self.session_manager.save(session)
 
-        self._last_turn_had_error = False
-        final_content, _tools_used, all_msgs, had_error = await self._run_agent_loop(
-            messages, on_new_messages=_persist_incremental,
-        )
-        self._last_turn_had_error = had_error
+            def _persist_incremental(new_msgs: list[dict[str, Any]]) -> None:
+                """Incrementally persist new messages from the agent loop."""
+                self._save_turn(
+                    session,
+                    new_msgs,
+                    0,
+                    inbound_source=source_text,
+                    agent_source=self.agent_id,
+                )
+                self.session_manager.save(session)
 
-        await self._maybe_consolidate(session)
+            self._last_turn_had_error = False
+            final_content, _tools_used, all_msgs, had_error = await self._run_agent_loop(
+                messages, on_new_messages=_persist_incremental,
+            )
+            self._last_turn_had_error = had_error
 
-        return final_content or ""
+            await self._maybe_consolidate(session)
+
+            return final_content or ""
+        finally:
+            self._active_session = None
 
     @staticmethod
     def _is_agent_source(source: str) -> bool:

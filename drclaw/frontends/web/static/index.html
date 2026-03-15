@@ -698,6 +698,14 @@ body {
           drop-shadow(0 0 12px rgba(241, 200, 76, 0.35));
 }
 
+.agent-output-bubble {
+  position: absolute;
+  pointer-events: none;
+  z-index: 101;
+  opacity: 0;
+  filter: drop-shadow(0 6px 12px rgba(15, 23, 42, 0.18));
+}
+
 #agents-grid {
   display: flex;
   flex-wrap: wrap;
@@ -1211,13 +1219,21 @@ body {
 }
 
 #chat-header-name {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
   color: #111827;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+#chat-header-loading {
+  width: 36px;
+  height: 36px;
+  display: block;
+  flex-shrink: 0;
+  animation: avatar-rotate 1.1s linear infinite;
 }
 
 .floating-chat-actions {
@@ -2053,6 +2069,7 @@ body {
   const ROUTE_STATISTICS = "#/statistics";
   const ROUTE_AGENTS_PREFIX = "#/agents/";
   const WEBUI_LANGUAGE_STORAGE_KEY = "drclaw-web-lang-v1";
+  const OFFICE_SCROLL_STORAGE_KEY = "drclaw-web-office-scroll-v1";
 
   const agentsGrid = document.getElementById("agents-grid");
   const agentsEmpty = document.getElementById("agents-empty");
@@ -2068,6 +2085,7 @@ body {
   const langSwitchEn = document.getElementById("lang-switch-en");
 
   const teamChatPanel = document.getElementById("team-chat-panel");
+  const officeArea = document.getElementById("office-area");
   const floatingChatPublishBtn = document.getElementById("floating-chat-publish");
   const chatHeader = document.getElementById("chat-header");
   const messagesEl = document.getElementById("messages");
@@ -2178,6 +2196,8 @@ body {
   let monitorWsState = "disconnected";
   let monitorRecentEventCount = 0;
   let currentLanguage = loadWebUiLanguage();
+  let pendingOfficeScrollRestore = loadOfficeScrollState();
+  let officeScrollRestoreAttempts = 0;
   let publishInFlight = false;
   const ASSET_CACHE_BUST = String(Date.now());
 
@@ -2207,6 +2227,8 @@ body {
       hub_section_not_activated: "Not activated",
       reload: "Reload",
       save: "Save",
+      config_saved: "Config saved.",
+      config_saved_restart_required: "Config saved. Restart daemon to apply the new configuration.",
       upload_skill: "Upload Skill (.zip)",
       publish: "Publish",
       publish_to_hub: "Publish to Agent Store",
@@ -2262,6 +2284,8 @@ body {
       hub_section_not_activated: "未激活",
       reload: "重新加载",
       save: "保存",
+      config_saved: "配置已保存。",
+      config_saved_restart_required: "配置已保存。请重启 daemon 以应用新配置。",
       upload_skill: "上传技能 (.zip)",
       publish: "发布",
       publish_to_hub: "发布到智能体商店",
@@ -2321,6 +2345,56 @@ body {
       return table[key];
     }
     return I18N.en[key] || key;
+  }
+
+  function loadOfficeScrollState() {
+    try {
+      const raw = sessionStorage.getItem(OFFICE_SCROLL_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const top = Number(parsed && parsed.top);
+      const left = Number(parsed && parsed.left);
+      return {
+        top: Number.isFinite(top) ? Math.max(0, top) : 0,
+        left: Number.isFinite(left) ? Math.max(0, left) : 0,
+      };
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function saveOfficeScrollState() {
+    if (!officeArea) return;
+    try {
+      sessionStorage.setItem(OFFICE_SCROLL_STORAGE_KEY, JSON.stringify({
+        top: officeArea.scrollTop,
+        left: officeArea.scrollLeft,
+      }));
+    } catch (_err) {
+      // Ignore persistence errors.
+    }
+  }
+
+  function restoreOfficeScrollIfNeeded() {
+    if (!officeArea || !pendingOfficeScrollRestore) return;
+    const route = normalizeHash(window.location.hash);
+    if (route !== ROUTE_AGENTS && !route.startsWith(ROUTE_AGENTS_PREFIX)) return;
+
+    const target = pendingOfficeScrollRestore;
+    window.requestAnimationFrame(function() {
+      window.requestAnimationFrame(function() {
+        if (!officeArea || !pendingOfficeScrollRestore) return;
+        officeArea.scrollTop = target.top;
+        officeArea.scrollLeft = target.left;
+        officeScrollRestoreAttempts += 1;
+
+        const topRestored = Math.abs(officeArea.scrollTop - target.top) < 2;
+        const leftRestored = Math.abs(officeArea.scrollLeft - target.left) < 2;
+        if ((topRestored && leftRestored) || officeScrollRestoreAttempts >= 4) {
+          pendingOfficeScrollRestore = null;
+        }
+      });
+    });
   }
 
   function apiUrl(path) {
@@ -2935,7 +3009,13 @@ body {
       }
       configData = response.config || payload;
       populateConfigForm(configData);
-      setConfigStatus("success", "Config saved. Restart daemon to apply all changes.");
+      if (response.restart_required) {
+        const message = t("config_saved_restart_required");
+        setConfigStatus("success", message);
+        alert(message);
+      } else {
+        setConfigStatus("success", t("config_saved"));
+      }
     } catch (e) {
       const message = e && e.message ? e.message : String(e);
       setConfigStatus("error", "Failed to save config: " + message);
@@ -3374,7 +3454,20 @@ body {
 
 
   function renderMonitor() {
+    const savedOfficeScroll = officeArea ? {
+      top: officeArea.scrollTop,
+      left: officeArea.scrollLeft,
+    } : null;
     const models = renderAgentsPage();
+    if (officeArea && savedOfficeScroll) {
+      officeArea.scrollTop = savedOfficeScroll.top;
+      officeArea.scrollLeft = savedOfficeScroll.left;
+      window.requestAnimationFrame(function() {
+        if (!officeArea) return;
+        officeArea.scrollTop = savedOfficeScroll.top;
+        officeArea.scrollLeft = savedOfficeScroll.left;
+      });
+    }
     if (monitorSummary) {
       const agentNodeCount = models.filter(function(m) { return m.kind === "agent"; }).length;
       monitorSummary.textContent =
@@ -3767,6 +3860,9 @@ body {
     if (status !== "working") {
       delete pendingByAgent[agentId];
     }
+    if (agentId === activeAgent) {
+      updateChatHeader();
+    }
     if (isAgentsViewActive()) {
       renderMonitor();
     }
@@ -3799,6 +3895,7 @@ body {
           : withAssetCacheBust("/assets/avatars/8.png")
       )
       : withAssetCacheBust("/assets/DrClaw.png");
+    const isWorking = agent ? uiStatus(agent) === "working" : Boolean(pendingByAgent[activeAgent]);
 
     chatHeader.innerHTML = "";
     const avatarWrap = document.createElement("div");
@@ -3818,6 +3915,14 @@ body {
 
     chatHeader.appendChild(avatarWrap);
     chatHeader.appendChild(nameEl);
+    if (isWorking) {
+      const loadingEl = document.createElement("img");
+      loadingEl.id = "chat-header-loading";
+      loadingEl.src = withAssetCacheBust("/assets/loading.png");
+      loadingEl.alt = "";
+      loadingEl.setAttribute("aria-hidden", "true");
+      chatHeader.appendChild(loadingEl);
+    }
     updatePublishButtonState();
   }
 
@@ -4265,7 +4370,6 @@ body {
     showChat();
     renderMessages();
     void loadAgentHistory(activeAgent);
-    msgInput.focus();
   }
 
   function appendTo(agentId, msg) {
@@ -4280,6 +4384,9 @@ body {
     if (!agentId) return;
     if (pending) pendingByAgent[agentId] = true;
     else delete pendingByAgent[agentId];
+    if (agentId === activeAgent) {
+      updateChatHeader();
+    }
     if (isAgentsViewActive()) {
       renderMonitor();
     }
@@ -4312,6 +4419,7 @@ body {
       if (isAgentsViewActive()) {
         enterChat(activeAgent);
         renderMonitor();
+        restoreOfficeScrollIfNeeded();
       }
       if (views.statistics && views.statistics.classList.contains("active")) {
         loadStatistics(true).catch(function() {});
@@ -4437,6 +4545,7 @@ body {
       const data = JSON.parse(ev.data);
       if (data.type === "chat") {
         recordMonitorEvent(data.type, data.source, data.topic);
+        fireAgentOutputBubble(data.source);
         appendTo(data.source, { role: "agent", text: data.text, files: data.files });
         setPending(data.source, false);
         debouncedFetchAgents();
@@ -4467,6 +4576,7 @@ body {
           });
           return;
         }
+        fireAgentOutputBubble(data.source);
         fireMessageTrail(data.source, data.topic);
         const fromLabel = agentLabel(data.source);
         const toLabel = agentLabel(data.topic);
@@ -4480,6 +4590,7 @@ body {
         }
       } else if (data.type === "tool_call") {
         recordMonitorEvent(data.type, data.source, data.topic);
+        fireAgentOutputBubble(data.source);
         appendTo(data.source, {
           role: "tool_call",
           text: data.text,
@@ -4487,6 +4598,9 @@ body {
         });
       } else if (data.type === "equipment_status" || data.type === "equipment_report") {
         recordMonitorEvent(data.type, data.source, data.topic);
+        if (isAgentLikeSource(data.source)) {
+          fireAgentOutputBubble(data.source);
+        }
         const line = "[" + data.type + "] " + data.text;
         appendTo(data.topic, { role: "routed", text: line });
         if (data.source !== data.topic) {
@@ -4496,11 +4610,13 @@ body {
         recordMonitorEvent(data.type, data.source, data.topic);
         const target = (data.source && getAgentById(data.source)) ? data.source : data.topic;
         if (target) {
+          fireAgentOutputBubble(target);
           appendTo(target, { role: "routed", text: "[" + data.type + "] " + data.text });
         }
       } else if (data.type === "error") {
         const errorAgentId = (data.source && getAgentById(data.source)) ? data.source : activeAgent;
         if (errorAgentId) {
+          fireAgentOutputBubble(errorAgentId);
           appendTo(errorAgentId, { role: "error", text: data.text });
           setPending(errorAgentId, false);
           setAgentStatus(errorAgentId, "error");
@@ -4516,6 +4632,53 @@ body {
   }
 
   const MSG_TRAIL_SVG = "data:image/svg+xml," + encodeURIComponent('<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M847.488 1008.896H61.504V117.056h491.968l294.016 229.952z" fill="#F0A221"/><path d="M956.48 901.888H170.496V10.048h556.032l230.016 226.176v665.664zM729.984 102.016v144h144l-144-144z m-104.96 81.984H286.016v57.984h339.008v-57.984z m216.96 164.992H284.992v57.984h556.992v-57.984z m0 169.984H284.992v57.984h556.992v-57.984z m0 165.056H284.992v57.984h556.992v-57.984z" fill="#F1C84C"/></svg>');
+
+  function randomInRange(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function fireAgentOutputBubble(agentId) {
+    if (!agentId || !isAgentsViewActive()) return;
+    var office = document.getElementById("office-area");
+    if (!office) return;
+    var card = office.querySelector('.desk-card[data-id="' + agentId + '"]');
+    if (!card) return;
+
+    var avatar = card.querySelector(".desk-avatar");
+    var officeRect = office.getBoundingClientRect();
+    var anchorRect = avatar ? avatar.getBoundingClientRect() : card.getBoundingClientRect();
+    var startX = anchorRect.left - officeRect.left + office.scrollLeft + randomInRange(-14, 40);
+    var startY = anchorRect.top - officeRect.top + office.scrollTop + randomInRange(-22, 8);
+    var driftX = randomInRange(-20, 20);
+    var riseY = randomInRange(36, 62);
+    var tilt = randomInRange(-12, 12);
+    var size = randomInRange(44.1, 60.9);
+
+    var bubble = document.createElement("img");
+    bubble.className = "agent-output-bubble";
+    bubble.src = withAssetCacheBust("/assets/bubble3.png");
+    bubble.alt = "";
+    bubble.setAttribute("aria-hidden", "true");
+    bubble.style.left = startX.toFixed(1) + "px";
+    bubble.style.top = startY.toFixed(1) + "px";
+    bubble.style.width = size.toFixed(1) + "px";
+    office.appendChild(bubble);
+
+    var anim = bubble.animate([
+      { transform: "translate(0px, 10px) scale(0.55) rotate(" + tilt.toFixed(1) + "deg)", opacity: 0 },
+      { transform: "translate(" + (driftX * 0.3).toFixed(1) + "px, -4px) scale(0.98) rotate(" + (tilt * 0.4).toFixed(1) + "deg)", opacity: 1, offset: 0.08 },
+      { transform: "translate(" + (driftX * 0.72).toFixed(1) + "px, -" + (riseY * 0.65).toFixed(1) + "px) scale(1.02) rotate(" + (tilt * 0.55).toFixed(1) + "deg)", opacity: 1, offset: 0.84 },
+      { transform: "translate(" + driftX.toFixed(1) + "px, -" + riseY.toFixed(1) + "px) scale(1.05) rotate(" + (tilt * 0.75).toFixed(1) + "deg)", opacity: 0 }
+    ], {
+      duration: 2650,
+      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      fill: "forwards",
+    });
+
+    anim.onfinish = function() {
+      bubble.remove();
+    };
+  }
 
   function fireMessageTrail(sourceId, targetId) {
     if (sourceId === targetId) return;
@@ -4571,6 +4734,7 @@ body {
         enterChat(route.agentId);
       }
       renderMonitor();
+      restoreOfficeScrollIfNeeded();
       return;
     }
     hidePublishModal();
@@ -4730,8 +4894,13 @@ body {
       }
     };
   }
+  if (officeArea) {
+    officeArea.addEventListener("scroll", saveOfficeScrollState, { passive: true });
+  }
 
   window.addEventListener("hashchange", renderRoute);
+  window.addEventListener("beforeunload", saveOfficeScrollState);
+  window.addEventListener("pagehide", saveOfficeScrollState);
 
   applyLanguage(currentLanguage);
   fetchAgents();

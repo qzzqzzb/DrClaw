@@ -515,6 +515,52 @@ async def test_agent_history_includes_user_attachments(kernel, adapter):
 
 
 @pytest.mark.asyncio
+async def test_agent_history_legacy_attachment_path_gets_download_url(kernel, adapter):
+    image_path = kernel.config.data_path / "projects" / "demo" / "workspace" / "history.png"
+    image_path.parent.mkdir(parents=True, exist_ok=True)
+    image_path.write_bytes(
+        bytes.fromhex(
+            "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+            "0000000d49444154789c6360606060000000050001a5f645400000000049454e44ae426082"
+        )
+    )
+
+    manager = SessionManager(kernel.config.data_path / "sessions")
+    session = manager.load("main")
+    session.messages = [
+        {
+            "role": "user",
+            "content": "",
+            "source": "user",
+            "attachments": [
+                {
+                    "name": "history.png",
+                    "mime": "image/png",
+                    "size": image_path.stat().st_size,
+                    "path": str(image_path),
+                }
+            ],
+        }
+    ]
+    manager.save(session)
+
+    app = _make_app(kernel, adapter)
+    async with TestClient(TestServer(app)) as client:
+        resp = await client.get("/api/agents/main/history")
+        assert resp.status == 200
+        body = await resp.json()
+        assert len(body["messages"]) == 1
+        msg = body["messages"][0]
+        assert isinstance(msg.get("files"), list)
+        assert msg["files"][0]["name"] == "history.png"
+        assert msg["files"][0]["download_url"].startswith("/api/chat/files/")
+
+        download = await client.get(msg["files"][0]["download_url"])
+        assert download.status == 200
+        assert download.headers["Content-Type"] == "image/png"
+
+
+@pytest.mark.asyncio
 async def test_agent_history_project_inactive_reads_from_disk(kernel, adapter):
     now = datetime.now(tz=timezone.utc)
     project = Project(

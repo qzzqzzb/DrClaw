@@ -1,0 +1,74 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pptx-tools"
+version = "0.1.0"
+description = "Enhanced PowerPoint shape manipulation tools with gradient, image filling and text box utilities"
+readme = "README.md"
+requires-python = ">=3.7"
+license = { text = "MIT" }
+authors = [
+    { name = "Your Name", email = "your.email@example.com" }
+]
+keywords = ["powerpoint", "pptx", "python-pptx", "gradient", "shapes"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Office/Business :: Office Suites",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "python-pptx>=0.6.21",  # 基础 PPT 操作
+    "Pillow>=9.0.0",        # 图片处理（渐变生成等）
+    "lxml>=4.9.0",          # XML 处理（增强 PPT 功能）
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=22.0.0",
+    "isort>=5.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/pptx-tools"
+Documentation = "https://github.com/yourusername/pptx-tools#readme"
+Repository = "https://github.com/yourusername/pptx-tools.git"
+Issues = "https://github.com/yourusername/pptx-tools/issues"
+
+[tool.hatch.build]
+packages = ["src"]
+
+[tool.hatch.build.targets.wheel]
+only-include = ["src/pptx_tools"]
+sources = ["src"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "README.md",
+    "LICENSE",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py37"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+
+[tool.hatch]
+packages = ["src"]
