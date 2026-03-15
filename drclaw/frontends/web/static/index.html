@@ -698,6 +698,14 @@ body {
           drop-shadow(0 0 12px rgba(241, 200, 76, 0.35));
 }
 
+.agent-output-bubble {
+  position: absolute;
+  pointer-events: none;
+  z-index: 101;
+  opacity: 0;
+  filter: drop-shadow(0 6px 12px rgba(15, 23, 42, 0.18));
+}
+
 #agents-grid {
   display: flex;
   flex-wrap: wrap;
@@ -4470,6 +4478,7 @@ body {
       const data = JSON.parse(ev.data);
       if (data.type === "chat") {
         recordMonitorEvent(data.type, data.source, data.topic);
+        fireAgentOutputBubble(data.source);
         appendTo(data.source, { role: "agent", text: data.text, files: data.files });
         setPending(data.source, false);
         debouncedFetchAgents();
@@ -4500,6 +4509,7 @@ body {
           });
           return;
         }
+        fireAgentOutputBubble(data.source);
         fireMessageTrail(data.source, data.topic);
         const fromLabel = agentLabel(data.source);
         const toLabel = agentLabel(data.topic);
@@ -4513,6 +4523,7 @@ body {
         }
       } else if (data.type === "tool_call") {
         recordMonitorEvent(data.type, data.source, data.topic);
+        fireAgentOutputBubble(data.source);
         appendTo(data.source, {
           role: "tool_call",
           text: data.text,
@@ -4520,6 +4531,9 @@ body {
         });
       } else if (data.type === "equipment_status" || data.type === "equipment_report") {
         recordMonitorEvent(data.type, data.source, data.topic);
+        if (isAgentLikeSource(data.source)) {
+          fireAgentOutputBubble(data.source);
+        }
         const line = "[" + data.type + "] " + data.text;
         appendTo(data.topic, { role: "routed", text: line });
         if (data.source !== data.topic) {
@@ -4529,11 +4543,13 @@ body {
         recordMonitorEvent(data.type, data.source, data.topic);
         const target = (data.source && getAgentById(data.source)) ? data.source : data.topic;
         if (target) {
+          fireAgentOutputBubble(target);
           appendTo(target, { role: "routed", text: "[" + data.type + "] " + data.text });
         }
       } else if (data.type === "error") {
         const errorAgentId = (data.source && getAgentById(data.source)) ? data.source : activeAgent;
         if (errorAgentId) {
+          fireAgentOutputBubble(errorAgentId);
           appendTo(errorAgentId, { role: "error", text: data.text });
           setPending(errorAgentId, false);
           setAgentStatus(errorAgentId, "error");
@@ -4549,6 +4565,53 @@ body {
   }
 
   const MSG_TRAIL_SVG = "data:image/svg+xml," + encodeURIComponent('<svg viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg"><path d="M847.488 1008.896H61.504V117.056h491.968l294.016 229.952z" fill="#F0A221"/><path d="M956.48 901.888H170.496V10.048h556.032l230.016 226.176v665.664zM729.984 102.016v144h144l-144-144z m-104.96 81.984H286.016v57.984h339.008v-57.984z m216.96 164.992H284.992v57.984h556.992v-57.984z m0 169.984H284.992v57.984h556.992v-57.984z m0 165.056H284.992v57.984h556.992v-57.984z" fill="#F1C84C"/></svg>');
+
+  function randomInRange(min, max) {
+    return min + Math.random() * (max - min);
+  }
+
+  function fireAgentOutputBubble(agentId) {
+    if (!agentId || !isAgentsViewActive()) return;
+    var office = document.getElementById("office-area");
+    if (!office) return;
+    var card = office.querySelector('.desk-card[data-id="' + agentId + '"]');
+    if (!card) return;
+
+    var avatar = card.querySelector(".desk-avatar");
+    var officeRect = office.getBoundingClientRect();
+    var anchorRect = avatar ? avatar.getBoundingClientRect() : card.getBoundingClientRect();
+    var startX = anchorRect.left - officeRect.left + office.scrollLeft + randomInRange(-14, 40);
+    var startY = anchorRect.top - officeRect.top + office.scrollTop + randomInRange(-22, 8);
+    var driftX = randomInRange(-20, 20);
+    var riseY = randomInRange(36, 62);
+    var tilt = randomInRange(-12, 12);
+    var size = randomInRange(44.1, 60.9);
+
+    var bubble = document.createElement("img");
+    bubble.className = "agent-output-bubble";
+    bubble.src = withAssetCacheBust("/assets/bubble3.png");
+    bubble.alt = "";
+    bubble.setAttribute("aria-hidden", "true");
+    bubble.style.left = startX.toFixed(1) + "px";
+    bubble.style.top = startY.toFixed(1) + "px";
+    bubble.style.width = size.toFixed(1) + "px";
+    office.appendChild(bubble);
+
+    var anim = bubble.animate([
+      { transform: "translate(0px, 10px) scale(0.55) rotate(" + tilt.toFixed(1) + "deg)", opacity: 0 },
+      { transform: "translate(" + (driftX * 0.3).toFixed(1) + "px, -4px) scale(0.98) rotate(" + (tilt * 0.4).toFixed(1) + "deg)", opacity: 1, offset: 0.08 },
+      { transform: "translate(" + (driftX * 0.72).toFixed(1) + "px, -" + (riseY * 0.65).toFixed(1) + "px) scale(1.02) rotate(" + (tilt * 0.55).toFixed(1) + "deg)", opacity: 1, offset: 0.84 },
+      { transform: "translate(" + driftX.toFixed(1) + "px, -" + riseY.toFixed(1) + "px) scale(1.05) rotate(" + (tilt * 0.75).toFixed(1) + "deg)", opacity: 0 }
+    ], {
+      duration: 2650,
+      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      fill: "forwards",
+    });
+
+    anim.onfinish = function() {
+      bubble.remove();
+    };
+  }
 
   function fireMessageTrail(sourceId, targetId) {
     if (sourceId === targetId) return;

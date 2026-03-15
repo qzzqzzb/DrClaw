@@ -29,6 +29,7 @@ if TYPE_CHECKING:
     from drclaw.models.project import Project
 
 STATIC_DIR = Path(__file__).parent / "static"
+BUNDLED_ASSETS_DIR = Path(__file__).resolve().parents[3] / "assets"
 SKILL_MARKDOWN_NAME = "SKILL.md"
 SOUL_MARKDOWN_NAME = "SOUL.md"
 SKILL_SOURCE_PRIORITY = {"global": 0, "hub": 1, "agent": 2}
@@ -1687,12 +1688,22 @@ async def handle_asset(request: web.Request) -> web.StreamResponse:
     filename = request.match_info.get("filename", "")
     if not filename:
         raise web.HTTPNotFound()
-    assets_dir = (kernel.config.data_path / "assets").resolve()
-    path = (assets_dir / filename).resolve()
-    if not path.exists() or not path.is_file():
+
+    candidate_dirs = [
+        (kernel.config.data_path / "assets").resolve(),
+        BUNDLED_ASSETS_DIR.resolve(),
+    ]
+    path: Path | None = None
+    for assets_dir in candidate_dirs:
+        candidate = (assets_dir / filename).resolve()
+        if not candidate.is_relative_to(assets_dir):
+            continue
+        if candidate.exists() and candidate.is_file():
+            path = candidate
+            break
+    if path is None:
         raise web.HTTPNotFound()
-    if not path.is_relative_to(assets_dir):
-        raise web.HTTPForbidden()
+
     resp = web.FileResponse(path)
     resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     return resp
