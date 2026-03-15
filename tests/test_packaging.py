@@ -18,3 +18,10 @@ def test_install_script_only_references_defined_extras() -> None:
     referenced_extras = set(re.findall(r"--extra\s+([A-Za-z0-9_-]+)", install_script))
 
     assert referenced_extras <= defined_extras
+
+
+def test_install_script_recommends_web_frontend_on_all_platforms() -> None:
+    install_script = (ROOT / "install.sh").read_text(encoding="utf-8")
+
+    assert "Launch DrClaw:     ${BOLD}drclaw daemon -f web${RESET}" in install_script
+    assert "Launch DrClaw:     ${BOLD}drclaw tray${RESET}" not in install_script

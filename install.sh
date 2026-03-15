@@ -169,9 +169,5 @@ echo "  Config:  ~/.drclaw/config.json"
 echo ""
 echo "${BOLD}Next steps:${RESET}"
 echo "  1. Set your API key in ${BOLD}~/.drclaw/config.json${RESET}"
-if [ "$OS" = "Darwin" ]; then
-echo "  2. Launch DrClaw:     ${BOLD}drclaw tray${RESET}"
-else
 echo "  2. Launch DrClaw:     ${BOLD}drclaw daemon -f web${RESET}"
-fi
 echo ""
