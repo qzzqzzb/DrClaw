@@ -2935,7 +2935,12 @@ body {
       }
       configData = response.config || payload;
       populateConfigForm(configData);
-      setConfigStatus("success", "Config saved. Restart daemon to apply all changes.");
+      if (response.restart_required) {
+        setConfigStatus("success", "Config saved. Restart daemon to apply the new configuration.");
+        alert("Config saved. Restart daemon to apply the new configuration.");
+      } else {
+        setConfigStatus("success", "Config saved.");
+      }
     } catch (e) {
       const message = e && e.message ? e.message : String(e);
       setConfigStatus("error", "Failed to save config: " + message);
