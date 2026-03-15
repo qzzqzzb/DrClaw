@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import urlsplit
 
 from aiohttp import web
 from loguru import logger
@@ -38,16 +40,89 @@ if TYPE_CHECKING:
     from drclaw.daemon.kernel import Kernel
 
 
+_ALLOWED_ORIGIN_SCHEMES = {"http", "https", "tauri"}
+
+
+def _is_loopback_host(value: str) -> bool:
+    host = value.strip().lower()
+    if not host:
+        return False
+    if host == "localhost":
+        return True
+    if host.startswith("[") and host.endswith("]"):
+        host = host[1:-1]
+    if "%" in host:
+        host = host.split("%", 1)[0]
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _is_loopback_peer(value: str | None) -> bool:
+    if value is None:
+        return False
+    return _is_loopback_host(value)
+
+
+def _host_header_name(request: web.Request) -> str:
+    host = request.headers.get("Host", "").strip()
+    if not host:
+        return ""
+    if host.startswith("["):
+        end = host.find("]")
+        if end == -1:
+            return ""
+        return host[1:end]
+    if host.count(":") == 1:
+        return host.split(":", 1)[0]
+    return host
+
+
+def _is_allowed_origin(origin: str) -> bool:
+    try:
+        parsed = urlsplit(origin)
+    except ValueError:
+        return False
+    if parsed.scheme.lower() not in _ALLOWED_ORIGIN_SCHEMES:
+        return False
+    if not parsed.hostname:
+        return False
+    return _is_loopback_host(parsed.hostname)
+
+
+@web.middleware
+async def _local_only_middleware(request: web.Request, handler):
+    """Reject any request that does not arrive from the local machine."""
+    if not _is_loopback_peer(request.remote):
+        return web.json_response({"error": "Localhost access only."}, status=403)
+
+    host_name = _host_header_name(request)
+    if not host_name or not _is_loopback_host(host_name):
+        return web.json_response({"error": "Localhost host header required."}, status=403)
+
+    return await handler(request)
+
+
 @web.middleware
 async def _cors_middleware(request: web.Request, handler):
-    """Allow cross-origin requests from Tauri dev webview (localhost:5173)."""
+    """Allow cross-origin requests only from local loopback origins."""
+    origin = request.headers.get("Origin", "").strip()
     if request.method == "OPTIONS":
-        resp = web.Response()
+        if origin and not _is_allowed_origin(origin):
+            return web.json_response({"error": "Origin not allowed."}, status=403)
+        resp = web.Response(status=204)
     else:
         resp = await handler(request)
-    resp.headers["Access-Control-Allow-Origin"] = "*"
-    resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, OPTIONS"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+
+    if origin:
+        if not _is_allowed_origin(origin):
+            return web.json_response({"error": "Origin not allowed."}, status=403)
+        resp.headers["Access-Control-Allow-Origin"] = origin
+        resp.headers["Vary"] = "Origin"
+        resp.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, OPTIONS"
+        resp.headers["Access-Control-Allow-Headers"] = "Content-Type"
+
     return resp
 
 
@@ -55,6 +130,8 @@ class WebAdapter:
     adapter_id = "web"
 
     def __init__(self, host: str = "127.0.0.1", port: int = 8080) -> None:
+        if not _is_loopback_host(host):
+            raise ValueError("WebAdapter host must be a loopback address")
         self.host = host
         self.port = port
         self._kernel: Kernel | None = None
@@ -66,7 +143,7 @@ class WebAdapter:
     async def start(self, kernel: Kernel) -> None:
         self._kernel = kernel
 
-        app = web.Application(middlewares=[_cors_middleware])
+        app = web.Application(middlewares=[_local_only_middleware, _cors_middleware])
         app["adapter"] = self
         app["kernel"] = kernel
         app["config_path"] = kernel.config.data_path / "config.json"

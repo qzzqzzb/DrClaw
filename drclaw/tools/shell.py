@@ -3,6 +3,7 @@
 import asyncio
 import os
 import re
+import shlex
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
@@ -22,7 +23,6 @@ class ExecTool(Tool):
     """Tool to execute shell commands with safety guards."""
 
     _DEFAULT_DENY: list[str] = [
-        r"\brm\s+-[rf]{1,2}\b",  # rm -r, rm -rf, rm -fr
         r"\bdel\s+/[fq]\b",  # del /f, del /q
         r"\brmdir\s+/s\b",  # rmdir /s
         r"(?:^|[;&|]\s*)format\b",  # format (standalone command only)
@@ -78,8 +78,9 @@ class ExecTool(Tool):
     async def execute(self, params: dict[str, Any]) -> str:
         command: str = params["command"]
         working_dir: str | None = params.get("working_dir")
-        # working_dir from JSON is always a str; self.working_dir is Path | None.
-        cwd: str | Path = working_dir or self.working_dir or os.getcwd()
+        cwd, cwd_error = self._resolve_cwd(working_dir)
+        if cwd_error:
+            return cwd_error
         guard_error = self._guard_command(command, str(cwd))
         if guard_error:
             return guard_error
@@ -141,6 +142,26 @@ class ExecTool(Tool):
                 process.kill()
             return f"Error: executing command: {str(e)}"
 
+    def _resolve_cwd(self, working_dir: str | None) -> tuple[str | Path, str | None]:
+        """Resolve the execution cwd and keep restricted tools inside their workspace."""
+        default_cwd: str | Path = self.working_dir or os.getcwd()
+        if not self.restrict_to_workspace:
+            return working_dir or default_cwd, None
+
+        workspace_root = Path(default_cwd).resolve()
+        if working_dir is None:
+            return workspace_root, None
+
+        requested = Path(working_dir).expanduser()
+        if not requested.is_absolute():
+            requested = workspace_root / requested
+        resolved = requested.resolve()
+        try:
+            resolved.relative_to(workspace_root)
+        except ValueError:
+            return "", "Error: Command blocked by safety guard (working dir outside workspace)"
+        return resolved, None
+
     def _guard_command(self, command: str, cwd: str) -> str | None:
         """Best-effort safety guard for potentially destructive commands.
 
@@ -151,6 +172,9 @@ class ExecTool(Tool):
         """
         # Pattern matching is case-insensitive — operate on the lowered string.
         lower = command.strip().lower()
+
+        if self._matches_dangerous_rm(command):
+            return "Error: Command blocked by safety guard (dangerous pattern detected)"
 
         for pattern in self.deny_patterns:
             if re.search(pattern, lower):
@@ -186,7 +210,55 @@ class ExecTool(Tool):
         """
         win_paths = re.findall(r"[A-Za-z]:\\[^\s\"'|><;]+", command)
         posix_paths = re.findall(r"(?:^|[\s|>])(/[^\s\"'>]+)", command)
-        return win_paths + posix_paths
+        quoted_win_paths = re.findall(r'"([A-Za-z]:\\[^"]+)"', command)
+        quoted_win_paths.extend(re.findall(r"'([A-Za-z]:\\[^']+)'", command))
+        quoted_posix_paths = re.findall(r'"(/[^"]+)"', command)
+        quoted_posix_paths.extend(re.findall(r"'(/[^']+)'", command))
+        return list(dict.fromkeys(win_paths + posix_paths + quoted_win_paths + quoted_posix_paths))
+
+    @staticmethod
+    def _matches_dangerous_rm(command: str) -> bool:
+        """Detect rm commands using force/recursive flags, including long options."""
+        try:
+            tokens = shlex.split(command, posix=True)
+        except ValueError:
+            return False
+
+        force_flags = {"-f", "--force"}
+        recursive_flags = {"-r", "-R", "--recursive"}
+        command_breaks = {";", "&&", "||", "|", "&"}
+
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if token in command_breaks:
+                i += 1
+                continue
+
+            if Path(token).name != "rm":
+                i += 1
+                continue
+
+            j = i + 1
+            while j < len(tokens) and tokens[j] not in command_breaks:
+                arg = tokens[j]
+                if arg == "--":
+                    break
+                if arg.startswith("--"):
+                    if arg in force_flags or arg in recursive_flags:
+                        return True
+                    j += 1
+                    continue
+                if arg.startswith("-") and len(arg) > 1:
+                    short_flags = set(arg[1:])
+                    if "f" in short_flags or "r" in short_flags or "R" in short_flags:
+                        return True
+                    j += 1
+                    continue
+                j += 1
+            i = j + 1
+
+        return False
 
 
 class LongExecTool(ExecTool):

@@ -44,6 +44,14 @@ async def test_main_agent_direct_response(
     assert result == "Hello from main agent!"
 
 
+def test_main_agent_does_not_register_remote_tmux_tools(main_agent: MainAgent) -> None:
+    names = set(main_agent.loop.tool_registry.tool_names)
+    assert "start_remote_tmux_session" not in names
+    assert "get_remote_tmux_session_status" not in names
+    assert "list_remote_tmux_sessions" not in names
+    assert "terminate_remote_tmux_session" not in names
+
+
 @pytest.mark.asyncio
 async def test_main_agent_web_dispatch_applies_zh_language_directive(
     main_agent: MainAgent, mock_provider: MockProvider

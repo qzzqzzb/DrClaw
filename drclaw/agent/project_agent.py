@@ -17,6 +17,7 @@ from drclaw.equipment.manager import EquipmentRuntimeManager
 from drclaw.equipment.prototypes import EquipmentPrototypeStore
 from drclaw.models.project import Project
 from drclaw.providers.base import LLMProvider
+from drclaw.remote_tmux.store import RemoteTmuxSessionStore
 from drclaw.session.manager import SessionManager
 from drclaw.soul import load_project_soul
 from drclaw.tools.background_tasks import (
@@ -38,6 +39,13 @@ from drclaw.tools.equipment_tools import (
     UseEquipmentTool,
 )
 from drclaw.tools.external_agent_tools import CallExternalAgentTool
+from drclaw.tools.remote_tmux import (
+    GetRemoteTmuxSessionStatusTool,
+    ListRemoteTmuxSessionsTool,
+    RemoteTmuxManager,
+    StartRemoteTmuxSessionTool,
+    TerminateRemoteTmuxSessionTool,
+)
 from drclaw.tools.registry import ToolRegistry
 from drclaw.utils.helpers import ensure_dir
 
@@ -101,6 +109,8 @@ class ProjectAgent:
         )
 
         self.memory_store = MemoryStore(project_dir)
+        self.remote_tmux_store = RemoteTmuxSessionStore(project_dir / "remote_tmux_sessions.json")
+        self.remote_tmux_manager = RemoteTmuxManager(self.remote_tmux_store)
 
         session_manager = SessionManager(project_dir / "sessions")
         caller_agent_id = f"proj:{project.id}"
@@ -152,6 +162,10 @@ class ProjectAgent:
         tool_registry.register(ListBackgroundToolTasksTool(self.background_task_manager))
         tool_registry.register(GetBackgroundToolTaskStatusTool(self.background_task_manager))
         tool_registry.register(CancelBackgroundToolTaskTool(self.background_task_manager))
+        tool_registry.register(StartRemoteTmuxSessionTool(self.remote_tmux_manager))
+        tool_registry.register(GetRemoteTmuxSessionStatusTool(self.remote_tmux_manager))
+        tool_registry.register(ListRemoteTmuxSessionsTool(self.remote_tmux_manager))
+        tool_registry.register(TerminateRemoteTmuxSessionTool(self.remote_tmux_manager))
 
         self.claude_code_manager = claude_code_manager
         if config.claude_code.enabled and self.claude_code_manager is not None:
