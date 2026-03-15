@@ -155,11 +155,22 @@ class ProjectAgent:
 
         self.claude_code_manager = claude_code_manager
         if config.claude_code.enabled and self.claude_code_manager is not None:
+            expose = config.claude_code.expose_tools_to_sessions
+
+            def _mcp_tools_provider() -> list:
+                if not expose:
+                    return []
+                all_tools = list(tool_registry._tools.values())  # noqa: SLF001
+                if expose == ["*"]:
+                    return all_tools
+                return [t for t in all_tools if t.name in expose]
+
             tool_registry.register(
                 UseClaudeCodeTool(
                     self.claude_code_manager,
                     caller_agent_id=caller_agent_id,
                     default_cwd=str(workspace_dir),
+                    mcp_tools_provider=_mcp_tools_provider,
                 )
             )
             tool_registry.register(

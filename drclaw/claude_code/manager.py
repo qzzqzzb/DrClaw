@@ -13,6 +13,7 @@ from loguru import logger
 
 from drclaw.bus.queue import MessageBus
 from drclaw.claude_code.models import TERMINAL_STATES, ClaudeCodeSession
+from drclaw.claude_code.retry import with_retry
 from drclaw.models.messages import InboundMessage, OutboundMessage
 
 
@@ -32,6 +33,9 @@ class ClaudeCodeSessionManager:
         default_env: dict[str, str] | None = None,
         client_factory: Any = None,
         log_dir: Path | None = None,
+        max_retries: int = 3,
+        retry_base_delay_seconds: float = 1.0,
+        retry_max_delay_seconds: float = 30.0,
     ) -> None:
         self.bus = bus
         self.max_concurrent = max_concurrent
@@ -45,6 +49,9 @@ class ClaudeCodeSessionManager:
         self.default_env = default_env or {}
         self._client_factory = client_factory
         self._log_dir = log_dir
+        self._max_retries = max_retries
+        self._retry_base_delay = retry_base_delay_seconds
+        self._retry_max_delay = retry_max_delay_seconds
         self._sessions: dict[str, ClaudeCodeSession] = {}
         self._clients: dict[str, Any] = {}
         self._session_logs: dict[str, IO[str]] = {}
@@ -93,6 +100,7 @@ class ClaudeCodeSessionManager:
         notify_on_completion: bool = True,
         notify_channel: str = "system",
         notify_chat_id: str | None = None,
+        mcp_tools: list[Any] | None = None,
     ) -> ClaudeCodeSession:
         async with self._lock:
             active = sum(
@@ -135,6 +143,7 @@ class ClaudeCodeSessionManager:
                 notify_on_completion=notify_on_completion,
                 notify_channel=notify_channel,
                 notify_chat_id=notify_chat_id or caller_agent_id,
+                mcp_tools=mcp_tools or [],
             )
         )
         session.task.add_done_callback(
@@ -166,7 +175,13 @@ class ClaudeCodeSessionManager:
             raise RuntimeError(f"No client for session {session_id}")
 
         try:
-            await client.query(message)
+            await with_retry(
+                lambda: client.query(message),
+                max_retries=self._max_retries,
+                base_delay=self._retry_base_delay,
+                max_delay=self._retry_max_delay,
+                session_id=session_id,
+            )
             await self._drain_response(session_id, client)
         except Exception as exc:
             logger.exception("Claude Code session {} send_message failed", session_id)
@@ -258,6 +273,7 @@ class ClaudeCodeSessionManager:
         notify_on_completion: bool,
         notify_channel: str,
         notify_chat_id: str,
+        mcp_tools: list[Any],
     ) -> None:
         session = self._sessions[session_id]
 
@@ -280,27 +296,52 @@ class ClaudeCodeSessionManager:
             logger.debug("CC session {} stderr: {}", session_id, line.rstrip())
             self._write_session_log(session_id, {"type": "stderr", "text": line.rstrip()})
 
+        allowed_tools = list(self.default_allowed_tools)
+        mcp_servers: dict[str, Any] = {}
+        if mcp_tools:
+            from drclaw.claude_code.mcp_bridge import create_mcp_bridge
+            bridge, bridged_names = create_mcp_bridge(mcp_tools)
+            mcp_servers["drclaw"] = bridge
+            # Allow Claude Code to call the bridged tools by their MCP-qualified names.
+            allowed_tools = allowed_tools + [f"mcp__drclaw__{n}" for n in bridged_names]
+
         options = ClaudeAgentOptions(
             cwd=cwd,
             permission_mode=self.default_permission_mode,
-            allowed_tools=list(self.default_allowed_tools),
+            allowed_tools=allowed_tools,
             max_budget_usd=max_budget_usd,
             max_turns=max_turns,
             stderr=_on_stderr,
             **({"env": dict(self.default_env)} if self.default_env else {}),
+            **({"mcp_servers": mcp_servers} if mcp_servers else {}),
         )
 
         try:
-            client = self._create_client(options)
+            # Each retry attempt must use a fresh client — the old subprocess may
+            # be in a corrupted state after a transient failure.
+            client_holder: list[Any] = []
+
+            async def _connect_with_fresh_client() -> None:
+                c = self._create_client(options)
+                await c.connect(instruction)
+                client_holder.append(c)
+
             logger.debug("CC session {} connecting to SDK...", session_id)
             self._write_session_log(session_id, {
                 "type": "connecting",
                 "permission_mode": self.default_permission_mode,
-                "allowed_tools": list(self.default_allowed_tools),
+                "allowed_tools": allowed_tools,
                 "max_budget_usd": max_budget_usd,
                 "max_turns": max_turns,
             })
-            await client.connect(instruction)
+            await with_retry(
+                _connect_with_fresh_client,
+                max_retries=self._max_retries,
+                base_delay=self._retry_base_delay,
+                max_delay=self._retry_max_delay,
+                session_id=session_id,
+            )
+            client = client_holder[0]
             self._clients[session_id] = client
             logger.info("CC session {} connected, draining response...", session_id)
             self._write_session_log(session_id, {"type": "connected"})
