@@ -26,6 +26,8 @@ from drclaw.equipment.prototypes import EquipmentPrototypeStore
 from drclaw.external_agents.bridge import ExternalAgentBridge
 from drclaw.models.project import Project, ProjectStore
 from drclaw.providers.base import LLMProvider
+from drclaw.sandbox.backends import DockerSandboxBackend
+from drclaw.sandbox.manager import SandboxJobManager
 from drclaw.usage.store import AgentUsageStore
 
 
@@ -87,6 +89,13 @@ class AgentRegistry:
             env_store=self.env_store,
             usage_store=self.usage_store,
         )
+        sandbox_runtime_root = config.data_path / "runtime" / "sandbox_jobs"
+        sandbox_runtime_root.mkdir(parents=True, exist_ok=True)
+        self.sandbox_job_manager = SandboxJobManager(
+            runtime_root=sandbox_runtime_root,
+            backend=DockerSandboxBackend(),
+            bus=bus,
+        )
         cc = config.claude_code
         self.claude_code_manager = ClaudeCodeSessionManager(
             bus=bus,
@@ -123,6 +132,7 @@ class AgentRegistry:
             ),
             on_project_remove=self.remove_project_agent,
             equipment_manager=self.equipment_manager,
+            sandbox_job_manager=self.sandbox_job_manager,
             env_store=self.env_store,
             cron_service=self.cron_service,
             external_agent_bridge=self.external_agent_bridge,
@@ -174,6 +184,7 @@ class AgentRegistry:
             project,
             debug_logger=debug_logger,
             equipment_manager=self.equipment_manager,
+            sandbox_job_manager=self.sandbox_job_manager,
             env_store=self.env_store,
             claude_code_manager=self.claude_code_manager,
             external_agent_bridge=self.external_agent_bridge,

@@ -284,6 +284,7 @@ async def test_main_agent_route_to_project(
         main_agent.config, main_agent.provider, project,
         debug_logger=main_agent.loop.debug_logger,
         equipment_manager=main_agent.equipment_manager,
+        sandbox_job_manager=main_agent.sandbox_job_manager,
         env_store=main_agent.env_store,
     )
     fake_instance.process_direct.assert_called_once_with("research ocean depths")

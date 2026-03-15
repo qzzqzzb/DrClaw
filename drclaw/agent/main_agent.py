@@ -25,6 +25,8 @@ from drclaw.models.project import (
     ProjectStore,
 )
 from drclaw.providers.base import LLMProvider
+from drclaw.sandbox.backends import DockerSandboxBackend
+from drclaw.sandbox.manager import SandboxJobManager
 from drclaw.session.manager import SessionManager
 from drclaw.skills.local_hub import LocalSkillHubStore
 from drclaw.soul import load_main_soul
@@ -128,6 +130,7 @@ class MainAgent:
         on_project_create: Callable[[Project], Any] | None = None,
         on_project_remove: Callable[[str], Awaitable[Any] | Any] | None = None,
         equipment_manager: EquipmentRuntimeManager | None = None,
+        sandbox_job_manager: SandboxJobManager | None = None,
         env_store: EnvStore | None = None,
         cron_service: CronService | None = None,
         external_agent_bridge: ExternalAgentBridge | None = None,
@@ -152,6 +155,12 @@ class MainAgent:
             provider=provider,
             config=config,
             env_store=self.env_store,
+        )
+        sandbox_runtime_root = data_dir / "runtime" / "sandbox_jobs"
+        sandbox_runtime_root.mkdir(parents=True, exist_ok=True)
+        self.sandbox_job_manager = sandbox_job_manager or SandboxJobManager(
+            runtime_root=sandbox_runtime_root,
+            backend=DockerSandboxBackend(),
         )
 
         self.project_store = JsonProjectStore(data_dir)
@@ -347,6 +356,7 @@ class MainAgent:
         """
         bus = self.loop.bus
         self.equipment_manager.bus = bus
+        self.sandbox_job_manager.bus = bus
         if bus is not None:
             origin = self.loop._current_inbound
             channel = origin.channel if origin else "cli"
@@ -391,6 +401,7 @@ class MainAgent:
             project,
             debug_logger=self.loop.debug_logger,
             equipment_manager=self.equipment_manager,
+            sandbox_job_manager=self.sandbox_job_manager,
             env_store=self.env_store,
         )
         return await agent.process_direct(message)
@@ -482,4 +493,5 @@ class MainAgent:
         """
         self.loop.bus = bus
         self.equipment_manager.bus = bus
+        self.sandbox_job_manager.bus = bus
         await self.loop.run()

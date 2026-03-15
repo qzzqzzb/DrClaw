@@ -228,6 +228,17 @@ After install, edit `~/.drclaw/config.json` to set your LLM provider. Any [litel
 
 We have a list of beta features. These features integrated in the main version, but not fully tested. If you want to use them, be careful. 
 
+### Docker Sandbox Jobs
+
+Student agents can now use `create_job` to start a Docker-backed sandbox job for high-risk shell work.
+
+- Exposed to student / project agents only; the main assistant does not call this tool directly
+- Current implementation is `shell_task` only: the host-side manager launches a Docker container to run the command
+- Default mode is async: with `await_result=false`, the tool returns immediately with `job_id` / `request_id` while the job keeps running in the background
+- Use `get_job_status` / `list_active_jobs` to inspect progress, and `pause_job` / `resume_job` / `cancel_job` to control a live job
+- Containers exit and are cleaned up after completion; persisted state lives in the job record, workspace, and artifacts, not in a long-lived container
+- Still beta: approval flow, in-container agent workers, and stricter network / permission controls are planned next
+
 ### External Agent Protocol
 
 External Agent Protocol let you connect any external agent to DrClaw, and interact with them via web.

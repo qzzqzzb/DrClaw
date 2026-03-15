@@ -16,6 +16,7 @@ from drclaw.equipment.manager import EquipmentRuntimeManager
 from drclaw.external_agents.bridge import ExternalAgentBridge
 from drclaw.models.project import JsonProjectStore, ProjectStore
 from drclaw.providers.base import LLMProvider
+from drclaw.sandbox.manager import SandboxJobManager
 from drclaw.usage.store import AgentUsageStore
 
 
@@ -26,6 +27,7 @@ class Kernel:
     registry: AgentRegistry
     project_store: ProjectStore
     equipment_manager: EquipmentRuntimeManager
+    sandbox_job_manager: SandboxJobManager
     claude_code_manager: ClaudeCodeSessionManager
     cron: CronService
     agent_hub_store: AgentHubStore
@@ -80,6 +82,7 @@ class Kernel:
             registry=registry,
             project_store=project_store,
             equipment_manager=registry.equipment_manager,
+            sandbox_job_manager=registry.sandbox_job_manager,
             claude_code_manager=registry.claude_code_manager,
             cron=cron,
             agent_hub_store=agent_hub_store,
@@ -91,6 +94,9 @@ class Kernel:
         self.cron.stop()
         await self.claude_code_manager.stop_all()
         maybe = self.registry.equipment_manager.stop_all()
+        if inspect.isawaitable(maybe):
+            await maybe
+        maybe = self.registry.sandbox_job_manager.stop_all()
         if inspect.isawaitable(maybe):
             await maybe
         await self.registry.stop_all()

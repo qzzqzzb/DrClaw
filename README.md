@@ -294,6 +294,17 @@ InternClaw是什么？
 
 一系列测试中功能正在逐步完善。这些功能未经过充分测试，请谨慎使用。
 
+### Docker Sandbox Job
+
+Student agent 现在可以通过 `create_job` 启动一个 Docker sandbox job 来执行高风险 shell 任务。
+
+- 该能力目前只对 student / project agent 暴露，main agent 不直接使用它（也不应该使用）
+- `shell_task`：student agent 提交命令后，由宿主机上的 manager 启动 Docker 容器执行
+- 默认异步执行：`await_result=false` 时会立即返回 `job_id` / `request_id`，任务在后台继续运行
+- 可通过 `get_job_status` / `list_active_jobs` 查看状态，并使用 `pause_job` / `resume_job` / `cancel_job` 控制运行中的 job
+- 容器完成后会自动退出并清理；保留 job 记录、workspace 和 artifacts
+- 仍属于测试中能力，后续补充 approval、容器内 agent worker 和更严格的网络/权限控制
+
 ### 外部智能体接入（External Agent Protocol）
 
 将任意外部智能体连接到InternClaw中，让InternClaw一并管理，派发任务，收取结果会汇报给你。
