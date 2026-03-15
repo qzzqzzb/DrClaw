@@ -18,7 +18,7 @@ from drclaw.bus.queue import MessageBus
 from drclaw.config.loader import load_config
 from drclaw.config.schema import DrClawConfig
 from drclaw.equipment.models import EquipmentPrototype
-from drclaw.frontends.web.adapter import WebAdapter
+from drclaw.frontends.web.adapter import WebAdapter, _cors_middleware, _local_only_middleware
 from drclaw.frontends.web.routes import (
     _normalize_avatar_for_web,
     handle_activate_agent,
@@ -71,7 +71,7 @@ def _make_mock_kernel(tmp_path):
 
 
 def _make_app(kernel, adapter):
-    app = web.Application()
+    app = web.Application(middlewares=[_local_only_middleware, _cors_middleware])
     app["kernel"] = kernel
     app["adapter"] = adapter
     app["config_path"] = kernel.config.data_path / "config.json"
@@ -160,6 +160,41 @@ async def test_asset_route_supports_nested_paths(kernel, adapter, tmp_path):
         resp = await client.get("/assets/avatars/17.png")
         assert resp.status == 200
         assert "no-store" in resp.headers.get("Cache-Control", "")
+
+
+@pytest.mark.asyncio
+async def test_rejects_non_loopback_host_header(kernel, adapter):
+    app = _make_app(kernel, adapter)
+    async with TestClient(TestServer(app)) as client:
+        resp = await client.get("/", headers={"Host": "example.com"})
+        assert resp.status == 403
+        body = await resp.json()
+        assert "Localhost" in body["error"]
+
+
+@pytest.mark.asyncio
+async def test_options_allows_loopback_origin(kernel, adapter):
+    app = _make_app(kernel, adapter)
+    async with TestClient(TestServer(app)) as client:
+        resp = await client.options(
+            "/api/agents",
+            headers={"Origin": "http://127.0.0.1:5173"},
+        )
+        assert resp.status == 204
+        assert resp.headers["Access-Control-Allow-Origin"] == "http://127.0.0.1:5173"
+
+
+@pytest.mark.asyncio
+async def test_options_rejects_remote_origin(kernel, adapter):
+    app = _make_app(kernel, adapter)
+    async with TestClient(TestServer(app)) as client:
+        resp = await client.options(
+            "/api/agents",
+            headers={"Origin": "https://example.com"},
+        )
+        assert resp.status == 403
+        body = await resp.json()
+        assert "Origin not allowed" in body["error"]
 
 
 # -- POST/GET /api/chat/files --------------------------------------------------
