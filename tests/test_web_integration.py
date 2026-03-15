@@ -1116,6 +1116,7 @@ async def test_config_get_endpoint(kernel, adapter):
         )
         assert data["active_provider"] == kernel.config.active_provider
         assert data["agent"]["max_iterations"] == kernel.config.agent.max_iterations
+        assert data["daemon"]["web_in_docker"] is False
 
 
 @pytest.mark.asyncio
@@ -1125,6 +1126,7 @@ async def test_config_put_endpoint_persists(kernel, adapter):
     payload["providers"][payload["active_provider"]]["model"] = "openai/gpt-4.1-mini"
     payload["daemon"]["verbose_chat"] = False
     payload["daemon"]["show_tool_calls"] = False
+    payload["daemon"]["web_in_docker"] = True
 
     async with TestClient(TestServer(app)) as client:
         resp = await client.put("/api/config", json=payload)
@@ -1137,12 +1139,14 @@ async def test_config_put_endpoint_persists(kernel, adapter):
         assert kernel.config.active_provider_config.model == "openai/gpt-4.1-mini"
         assert kernel.config.daemon.verbose_chat is False
         assert kernel.config.daemon.show_tool_calls is False
+        assert kernel.config.daemon.web_in_docker is True
 
     config_path = kernel.config.data_path / "config.json"
     loaded = load_config(config_path)
     assert loaded.active_provider_config.model == "openai/gpt-4.1-mini"
     assert loaded.daemon.verbose_chat is False
     assert loaded.daemon.show_tool_calls is False
+    assert loaded.daemon.web_in_docker is True
 
 
 @pytest.mark.asyncio

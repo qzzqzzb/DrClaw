@@ -41,6 +41,7 @@ if TYPE_CHECKING:
 
 
 _ALLOWED_ORIGIN_SCHEMES = {"http", "https", "tauri"}
+_DOCKER_BIND_HOST = "0.0.0.0"
 
 
 def _is_loopback_host(value: str) -> bool:
@@ -63,6 +64,12 @@ def _is_loopback_peer(value: str | None) -> bool:
     if value is None:
         return False
     return _is_loopback_host(value)
+
+
+def _is_allowed_peer(value: str | None, *, docker_mode: bool = False) -> bool:
+    if docker_mode:
+        return value is not None
+    return _is_loopback_peer(value)
 
 
 def _host_header_name(request: web.Request) -> str:
@@ -91,10 +98,15 @@ def _is_allowed_origin(origin: str) -> bool:
     return _is_loopback_host(parsed.hostname)
 
 
+def _docker_mode_enabled(request: web.Request) -> bool:
+    adapter = request.app.get("adapter")
+    return bool(getattr(adapter, "docker_mode", False))
+
+
 @web.middleware
 async def _local_only_middleware(request: web.Request, handler):
     """Reject any request that does not arrive from the local machine."""
-    if not _is_loopback_peer(request.remote):
+    if not _is_allowed_peer(request.remote, docker_mode=_docker_mode_enabled(request)):
         return web.json_response({"error": "Localhost access only."}, status=403)
 
     host_name = _host_header_name(request)
@@ -129,19 +141,31 @@ async def _cors_middleware(request: web.Request, handler):
 class WebAdapter:
     adapter_id = "web"
 
-    def __init__(self, host: str = "127.0.0.1", port: int = 8080) -> None:
+    def __init__(
+        self,
+        host: str = "127.0.0.1",
+        port: int = 8080,
+        *,
+        docker_mode: bool = False,
+    ) -> None:
         if not _is_loopback_host(host):
             raise ValueError("WebAdapter host must be a loopback address")
         self.host = host
         self.port = port
+        self.docker_mode = docker_mode
         self._kernel: Kernel | None = None
         self._connections: dict[str, web.WebSocketResponse] = {}
         self._runner: web.AppRunner | None = None
         self._drain_task: asyncio.Task[None] | None = None
         self._inbound_task: asyncio.Task[None] | None = None
 
+    @property
+    def bind_host(self) -> str:
+        return _DOCKER_BIND_HOST if self.docker_mode else self.host
+
     async def start(self, kernel: Kernel) -> None:
         self._kernel = kernel
+        self.docker_mode = kernel.config.daemon.web_in_docker
 
         app = web.Application(middlewares=[_local_only_middleware, _cors_middleware])
         app["adapter"] = self
@@ -170,9 +194,14 @@ class WebAdapter:
 
         self._runner = web.AppRunner(app)
         await self._runner.setup()
-        site = web.TCPSite(self._runner, self.host, self.port)
+        site = web.TCPSite(self._runner, self.bind_host, self.port)
         await site.start()
-        logger.info("Web UI listening on http://{}:{}", self.host, self.port)
+        logger.info(
+            "Web UI listening on http://{}:{} (bind {})",
+            self.host,
+            self.port,
+            self.bind_host,
+        )
 
         self._drain_task = asyncio.create_task(self._drain_outbound())
         self._inbound_task = asyncio.create_task(self._drain_inbound())

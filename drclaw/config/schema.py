@@ -30,6 +30,7 @@ class DaemonConfig(BaseModel):
     frontends: list[str] = Field(default_factory=list)
     verbose_chat: bool = True
     show_tool_calls: bool = True
+    web_in_docker: bool = False
 
 
 class TrayConfig(BaseModel):

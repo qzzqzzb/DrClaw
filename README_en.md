@@ -224,6 +224,26 @@ After install, edit `~/.drclaw/config.json` to set your LLM provider. Any [litel
 
 `web_fetch` does not require an API key.
 
+Note: if you run the above configuration inside Docker, the Web UI will not start by default because of the network restrictions. The Web frontend only accepts loopback binds and loopback peers unless Docker mode is explicitly enabled.
+
+If you knowingly want to run DrClaw locally inside Docker, add:
+
+```json
+{
+  "daemon": {
+    "web_in_docker": true
+  }
+}
+```
+
+With this enabled, the Web frontend binds to `0.0.0.0` and relaxes the peer-address check for Docker bridge traffic; `Host` and `Origin` still must be `127.0.0.1`, `::1`, or `localhost`. This is intended for local-only Docker publishing such as:
+
+```bash
+docker run -p 127.0.0.1:8080:8080 ...
+```
+
+Note: this switch only affects the Web UI. External-agent callbacks still assume same-host `127.0.0.1` reachability.
+
 ## Beta
 
 We have a list of beta features. These features integrated in the main version, but not fully tested. If you want to use them, be careful. 
