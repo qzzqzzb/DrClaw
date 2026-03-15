@@ -121,6 +121,16 @@ def test_migrate_legacy_provider_key(tmp_data_dir: Path):
     assert loaded.providers["default"].model == "anthropic/claude-sonnet-4-5"
 
 
+def test_model_accepts_legacy_provider_key():
+    cfg = DrClawConfig.model_validate(
+        {"provider": {"api_key": "sk-legacy", "model": "openai/gpt-4o"}}
+    )
+    assert cfg.active_provider == "default"
+    assert cfg.active_provider_config.api_key == "sk-legacy"
+    assert cfg.active_provider_config.model == "openai/gpt-4o"
+    assert cfg.provider.model == "openai/gpt-4o"
+
+
 def test_load_config_migrates_legacy_tray_default_program(tmp_data_dir: Path):
     path = tmp_data_dir / "config.json"
     path.write_text(

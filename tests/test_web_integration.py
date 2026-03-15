@@ -1076,7 +1076,10 @@ async def test_config_get_endpoint(kernel, adapter):
         resp = await client.get("/api/config")
         assert resp.status == 200
         data = await resp.json()
-        assert data["provider"]["model"] == kernel.config.provider.model
+        assert data["providers"][kernel.config.active_provider]["model"] == (
+            kernel.config.active_provider_config.model
+        )
+        assert data["active_provider"] == kernel.config.active_provider
         assert data["agent"]["max_iterations"] == kernel.config.agent.max_iterations
 
 
@@ -1084,7 +1087,7 @@ async def test_config_get_endpoint(kernel, adapter):
 async def test_config_put_endpoint_persists(kernel, adapter):
     app = _make_app(kernel, adapter)
     payload = kernel.config.model_dump(by_alias=True)
-    payload["provider"]["model"] = "openai/gpt-4.1-mini"
+    payload["providers"][payload["active_provider"]]["model"] = "openai/gpt-4.1-mini"
     payload["daemon"]["verbose_chat"] = False
     payload["daemon"]["show_tool_calls"] = False
 
@@ -1093,14 +1096,16 @@ async def test_config_put_endpoint_persists(kernel, adapter):
         assert resp.status == 200
         data = await resp.json()
         assert data["restart_required"] is True
-        assert data["config"]["provider"]["model"] == "openai/gpt-4.1-mini"
-        assert kernel.config.provider.model == "openai/gpt-4.1-mini"
+        assert data["config"]["providers"][data["config"]["active_provider"]]["model"] == (
+            "openai/gpt-4.1-mini"
+        )
+        assert kernel.config.active_provider_config.model == "openai/gpt-4.1-mini"
         assert kernel.config.daemon.verbose_chat is False
         assert kernel.config.daemon.show_tool_calls is False
 
     config_path = kernel.config.data_path / "config.json"
     loaded = load_config(config_path)
-    assert loaded.provider.model == "openai/gpt-4.1-mini"
+    assert loaded.active_provider_config.model == "openai/gpt-4.1-mini"
     assert loaded.daemon.verbose_chat is False
     assert loaded.daemon.show_tool_calls is False
 

@@ -2409,7 +2409,8 @@ body {
   }
 
   function populateConfigForm(config) {
-    const provider = config.provider || {};
+    const providers = config.providers || {};
+    const provider = providers[config.active_provider || "default"] || {};
     const agent = config.agent || {};
     const daemon = config.daemon || {};
     const tray = config.tray || {};
@@ -2463,12 +2464,17 @@ body {
       throw new Error("Config is not loaded yet.");
     }
 
+    const activeProvider = configData.active_provider || "default";
     const payload = {
-      provider: {
-        api_key: cfgProviderApiKey.value,
-        api_base: cfgProviderApiBase.value.trim() || null,
-        model: cfgProviderModel.value,
+      providers: {
+        ...(configData.providers || {}),
+        [activeProvider]: {
+          api_key: cfgProviderApiKey.value,
+          api_base: cfgProviderApiBase.value.trim() || null,
+          model: cfgProviderModel.value,
+        },
       },
+      active_provider: activeProvider,
       agent: {
         max_iterations: parseRequiredInt(cfgAgentMaxIterations.value, "Agent max iterations"),
         max_tokens: parseRequiredInt(cfgAgentMaxTokens.value, "Agent max tokens"),

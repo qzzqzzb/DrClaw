@@ -38,7 +38,9 @@ def test_provider_login_lists_supported():
 def test_make_provider_routes_codex():
     from drclaw.providers.openai_codex_provider import OpenAICodexProvider
 
-    config = DrClawConfig(provider=ProviderConfig(model="openai-codex/gpt-5.1-codex"))
+    config = DrClawConfig(
+        providers={"default": ProviderConfig(model="openai-codex/gpt-5.1-codex")}
+    )
     provider = _make_provider(config)
     assert isinstance(provider, OpenAICodexProvider)
 
@@ -46,7 +48,9 @@ def test_make_provider_routes_codex():
 def test_make_provider_routes_codex_underscore():
     from drclaw.providers.openai_codex_provider import OpenAICodexProvider
 
-    config = DrClawConfig(provider=ProviderConfig(model="openai_codex/gpt-5.1-codex"))
+    config = DrClawConfig(
+        providers={"default": ProviderConfig(model="openai_codex/gpt-5.1-codex")}
+    )
     provider = _make_provider(config)
     assert isinstance(provider, OpenAICodexProvider)
 
@@ -54,7 +58,9 @@ def test_make_provider_routes_codex_underscore():
 def test_make_provider_routes_copilot_to_litellm():
     from drclaw.providers.litellm_provider import LiteLLMProvider
 
-    config = DrClawConfig(provider=ProviderConfig(model="github_copilot/gpt-4o"))
+    config = DrClawConfig(
+        providers={"default": ProviderConfig(model="github_copilot/gpt-4o")}
+    )
     provider = _make_provider(config)
     assert isinstance(provider, LiteLLMProvider)
 
@@ -62,6 +68,8 @@ def test_make_provider_routes_copilot_to_litellm():
 def test_make_provider_routes_anthropic_to_litellm():
     from drclaw.providers.litellm_provider import LiteLLMProvider
 
-    config = DrClawConfig(provider=ProviderConfig(model="anthropic/claude-sonnet-4-5"))
+    config = DrClawConfig(
+        providers={"default": ProviderConfig(model="anthropic/claude-sonnet-4-5")}
+    )
     provider = _make_provider(config)
     assert isinstance(provider, LiteLLMProvider)

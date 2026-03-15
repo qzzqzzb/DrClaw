@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ProviderConfig(BaseModel):
@@ -151,12 +151,30 @@ class DrClawConfig(BaseModel):
     claude_code: ClaudeCodeConfig = ClaudeCodeConfig()
     external_agents: list[ExternalAgentConfig] = Field(default_factory=list)
 
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_single_provider_input(cls, data):  # noqa: ANN001
+        """Accept legacy single-provider payloads in Python and JSON inputs."""
+        if not isinstance(data, dict):
+            return data
+        if "provider" in data and "providers" not in data:
+            migrated = dict(data)
+            migrated["providers"] = {"default": migrated.pop("provider")}
+            migrated.setdefault("active_provider", "default")
+            return migrated
+        return data
+
     @property
     def active_provider_config(self) -> ProviderConfig:
         cfg = self.providers.get(self.active_provider)
         if cfg is None:
             raise ValueError(f"active_provider {self.active_provider!r} not found in providers")
         return cfg
+
+    @property
+    def provider(self) -> ProviderConfig:
+        """Legacy alias for the active provider config."""
+        return self.active_provider_config
 
     @property
     def data_path(self) -> Path:
