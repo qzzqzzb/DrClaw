@@ -35,6 +35,14 @@ def test_project_agent_does_not_register_message_tool(agent: ProjectAgent) -> No
     assert "message" not in agent.loop.tool_registry.tool_names
 
 
+def test_project_agent_registers_remote_tmux_tools(agent: ProjectAgent) -> None:
+    names = set(agent.loop.tool_registry.tool_names)
+    assert "start_remote_tmux_session" in names
+    assert "get_remote_tmux_session_status" in names
+    assert "list_remote_tmux_sessions" in names
+    assert "terminate_remote_tmux_session" in names
+
+
 def test_project_agent_claude_code_tools_disabled_by_default(
     tmp_path: Path, mock_provider: MockProvider, project: Project
 ) -> None:

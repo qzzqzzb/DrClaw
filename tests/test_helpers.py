@@ -62,6 +62,7 @@ def test_ensure_default_skill_dirs_seeds_builtin_global_skills(tmp_path: Path):
     assert (tmp_path / "assets" / "avatars" / "17.png").is_file()
     # Builtin skills are copied into user-global skills on bootstrap.
     assert (skills_dir / "memory" / "SKILL.md").is_file()
+    assert (skills_dir / "ssh-long-session" / "SKILL.md").is_file()
     # Agent hub templates are seeded on first bootstrap.
     assert (tmp_path / "agent-hub" / "cat" / "AGENT.yaml").is_file()
     # Local hub templates are seeded on first bootstrap.
