@@ -2207,6 +2207,8 @@ body {
       hub_section_not_activated: "Not activated",
       reload: "Reload",
       save: "Save",
+      config_saved: "Config saved.",
+      config_saved_restart_required: "Config saved. Restart daemon to apply the new configuration.",
       upload_skill: "Upload Skill (.zip)",
       publish: "Publish",
       publish_to_hub: "Publish to Agent Store",
@@ -2262,6 +2264,8 @@ body {
       hub_section_not_activated: "未激活",
       reload: "重新加载",
       save: "保存",
+      config_saved: "配置已保存。",
+      config_saved_restart_required: "配置已保存。请重启 daemon 以应用新配置。",
       upload_skill: "上传技能 (.zip)",
       publish: "发布",
       publish_to_hub: "发布到智能体商店",
@@ -2936,10 +2940,11 @@ body {
       configData = response.config || payload;
       populateConfigForm(configData);
       if (response.restart_required) {
-        setConfigStatus("success", "Config saved. Restart daemon to apply the new configuration.");
-        alert("Config saved. Restart daemon to apply the new configuration.");
+        const message = t("config_saved_restart_required");
+        setConfigStatus("success", message);
+        alert(message);
       } else {
-        setConfigStatus("success", "Config saved.");
+        setConfigStatus("success", t("config_saved"));
       }
     } catch (e) {
       const message = e && e.message ? e.message : String(e);
