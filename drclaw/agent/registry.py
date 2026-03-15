@@ -98,6 +98,9 @@ class AgentRegistry:
             default_allowed_tools=list(cc.allowed_tools),
             default_env=dict(cc.env) if cc.env else None,
             log_dir=config.data_path / "debug" / "claude_code",
+            max_retries=cc.max_retries,
+            retry_base_delay_seconds=cc.retry_base_delay_seconds,
+            retry_max_delay_seconds=cc.retry_max_delay_seconds,
         )
 
     def start_main(self, debug_logger: DebugLogger | None = None) -> AgentHandle:
