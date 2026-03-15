@@ -74,7 +74,7 @@ def _make_provider(config: DrClawConfig):  # noqa: ANN201
     from drclaw.providers.litellm_provider import LiteLLMProvider
 
     return LiteLLMProvider(
-        config.provider,
+        config.active_provider_config,
         max_tokens=config.agent.max_tokens,
         temperature=config.agent.temperature,
     )
@@ -160,7 +160,7 @@ def status() -> None:
         raise typer.Exit(code=1) from None
     console.print(f"DrClaw v{__version__}")
     console.print(f"Data dir: {config.data_path}")
-    console.print(f"Model:    {config.provider.model}")
+    console.print(f"Model:    {config.active_provider_config.model} [{config.active_provider}]")
     console.print(f"Projects: {count}")
 
 
@@ -291,7 +291,7 @@ def chat(
     if debug:
         log_path, dl = _make_debug_logger(config.data_path, session_key, full=debug_full)
         console.print(f"Debug log: {log_path}")
-        dl.log_session_start(session_key, config.provider.model)
+        dl.log_session_start(session_key, config.active_provider_config.model)
 
     try:
         if message is None:
