@@ -1853,6 +1853,10 @@ body {
               <input id="cfg-daemon-verbose-chat" type="checkbox">
               <label for="cfg-daemon-verbose-chat">Verbose chat mode (show routed/internal details)</label>
             </div>
+            <div class="config-field config-checkbox">
+              <input id="cfg-daemon-web-in-docker" type="checkbox">
+              <label for="cfg-daemon-web-in-docker">Web in Docker mode (bind 0.0.0.0, trust Docker bridge peer)</label>
+            </div>
           </fieldset>
 
           <fieldset class="config-card">
@@ -2091,6 +2095,7 @@ body {
   const cfgDaemonFrontends = document.getElementById("cfg-daemon-frontends");
   const cfgDaemonShowToolCalls = document.getElementById("cfg-daemon-show-tool-calls");
   const cfgDaemonVerboseChat = document.getElementById("cfg-daemon-verbose-chat");
+  const cfgDaemonWebInDocker = document.getElementById("cfg-daemon-web-in-docker");
   const cfgTrayControlPanelUrl = document.getElementById("cfg-tray-control-panel-url");
   const cfgTrayIconPath = document.getElementById("cfg-tray-icon-path");
   const cfgTrayDaemonProgram = document.getElementById("cfg-tray-daemon-program");
@@ -2774,6 +2779,7 @@ body {
     cfgDaemonFrontends.value = formatCsvList(daemon.frontends);
     cfgDaemonShowToolCalls.checked = daemon.show_tool_calls !== false;
     cfgDaemonVerboseChat.checked = daemon.verbose_chat !== false;
+    cfgDaemonWebInDocker.checked = daemon.web_in_docker === true;
 
     cfgTrayControlPanelUrl.value = tray.control_panel_url || "";
     cfgTrayIconPath.value = tray.icon_path || "";
@@ -2829,6 +2835,7 @@ body {
         frontends: parseCsvList(cfgDaemonFrontends.value),
         verbose_chat: Boolean(cfgDaemonVerboseChat.checked),
         show_tool_calls: Boolean(cfgDaemonShowToolCalls.checked),
+        web_in_docker: Boolean(cfgDaemonWebInDocker.checked),
       },
       tray: {
         control_panel_url: cfgTrayControlPanelUrl.value,

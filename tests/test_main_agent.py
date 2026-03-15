@@ -416,6 +416,8 @@ def test_main_agent_creates_soul_file(
     assert soul_file.is_file()
     assert "Identity & Persona" in soul_file.read_text(encoding="utf-8")
     assert "Be 虾秘, the main DrClaw assistant." in prompt
+    assert "default to uv" in prompt
+    assert "seek help from the user or caller" in prompt
 
 
 @pytest.mark.asyncio

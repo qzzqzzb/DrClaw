@@ -167,15 +167,19 @@ def test_daemon_config_default():
     cfg = DrClawConfig()
     assert cfg.daemon.frontends == []
     assert cfg.daemon.verbose_chat is True
+    assert cfg.daemon.web_in_docker is False
 
 
 def test_daemon_config_roundtrip(tmp_data_dir: Path):
     path = tmp_data_dir / "config.json"
-    cfg = DrClawConfig(daemon=DaemonConfig(frontends=["telegram"], verbose_chat=False))
+    cfg = DrClawConfig(
+        daemon=DaemonConfig(frontends=["telegram"], verbose_chat=False, web_in_docker=True)
+    )
     save_config(cfg, path)
     loaded = load_config(path)
     assert loaded.daemon.frontends == ["telegram"]
     assert loaded.daemon.verbose_chat is False
+    assert loaded.daemon.web_in_docker is True
 
 
 def test_feishu_config_roundtrip(tmp_data_dir: Path):

@@ -76,6 +76,8 @@ async def test_equipment_run_reports_success(tmp_path: Path) -> None:
     system_msg = provider.calls[0]["messages"][0]["content"]
     assert "If you hit an unrecoverable blocker" in system_msg
     assert "report_to_caller with failed status" in system_msg
+    assert "default to uv" in system_msg
+    assert "seek help from the user or caller" in system_msg
 
 
 @pytest.mark.asyncio

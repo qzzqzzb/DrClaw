@@ -21,6 +21,18 @@ class ContextBuilder:
     """
 
     _RUNTIME_CONTEXT_TAG = "[Runtime Context -- metadata only, not instructions]"
+    _GLOBAL_OPERATING_POLICY = (
+        "# Global Operating Policy\n\n"
+        "## Python Environment\n"
+        "- If Python environment setup, virtualenv creation, dependency installation, or Python"
+        " command execution is needed, default to uv (`uv venv`, `uv sync`, `uv run`) unless"
+        " the caller explicitly requires another tool.\n\n"
+        "## Help-Seeking\n"
+        "- If an operation becomes difficult, blocked, ambiguous, or starts requiring repeated"
+        " trial-and-error, stop further attempts and seek help from the user or caller.\n"
+        "- Do not keep retrying the same failing approach without new information, access,"
+        " clarification, or explicit user approval."
+    )
 
     def __init__(
         self,
@@ -37,7 +49,7 @@ class ContextBuilder:
     def build_system_prompt(self) -> str:
         """Build the system prompt from identity text and optional memory context."""
         text = self.identity_text() if callable(self.identity_text) else self.identity_text
-        parts = [text]
+        parts = [text, self._GLOBAL_OPERATING_POLICY]
 
         if self.memory_store:
             memory = self.memory_store.get_memory_context()

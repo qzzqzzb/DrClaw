@@ -223,6 +223,8 @@ async def test_project_metadata_in_identity(
     assert "list_active_equipment_runs/get_equipment_run_status" in system_msg
     assert "do not start a duplicate equipment run" in system_msg
     assert "unrecoverable external dependency error" in system_msg
+    assert "default to uv" in system_msg
+    assert "seek help from the user or caller" in system_msg
 
 
 @pytest.mark.asyncio
