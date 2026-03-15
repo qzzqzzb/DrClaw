@@ -113,7 +113,11 @@ fi
 # --- Create venv + install ---------------------------------------------
 info "Installing dependencies (this may take a minute)..."
 cd "$DRCLAW_DIR"
-uv sync --extra tray --quiet
+if [ "$OS" = "Darwin" ]; then
+    uv sync --extra tray --quiet
+else
+    uv sync --quiet
+fi
 success "Dependencies installed"
 
 # --- Symlink to PATH ---------------------------------------------------
