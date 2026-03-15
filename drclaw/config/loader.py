@@ -20,6 +20,10 @@ def _migrate_legacy_defaults(data: object) -> object:
     """Migrate known legacy config defaults to current defaults."""
     if not isinstance(data, dict):
         return data
+    # Migrate old single-provider format to multi-provider format.
+    if "provider" in data and "providers" not in data:
+        data["providers"] = {"default": data.pop("provider")}
+        data.setdefault("active_provider", "default")
     tray = data.get("tray")
     if not isinstance(tray, dict):
         return data

@@ -129,7 +129,10 @@ class ExternalAgentConfig(BaseModel):
 class DrClawConfig(BaseModel):
     """Root configuration for DrClaw."""
 
-    provider: ProviderConfig = ProviderConfig()
+    providers: dict[str, ProviderConfig] = Field(
+        default_factory=lambda: {"default": ProviderConfig()}
+    )
+    active_provider: str = "default"
     agent: AgentConfig = AgentConfig()
     data_dir: str = "~/.drclaw"
     daemon: DaemonConfig = DaemonConfig()
@@ -139,6 +142,13 @@ class DrClawConfig(BaseModel):
     env: EnvConfig = EnvConfig()
     claude_code: ClaudeCodeConfig = ClaudeCodeConfig()
     external_agents: list[ExternalAgentConfig] = Field(default_factory=list)
+
+    @property
+    def active_provider_config(self) -> ProviderConfig:
+        cfg = self.providers.get(self.active_provider)
+        if cfg is None:
+            raise ValueError(f"active_provider {self.active_provider!r} not found in providers")
+        return cfg
 
     @property
     def data_path(self) -> Path:
