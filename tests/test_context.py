@@ -43,6 +43,9 @@ def test_callable_identity_text() -> None:
 def test_build_system_prompt_no_memory(builder: ContextBuilder) -> None:
     prompt = builder.build_system_prompt()
     assert IDENTITY in prompt
+    assert "# Global Operating Policy" in prompt
+    assert "default to uv" in prompt
+    assert "seek help from the user or caller" in prompt
     assert "Memory" not in prompt
 
 
@@ -319,9 +322,10 @@ def test_section_ordering(tmp_path: Path) -> None:
     prompt = cb.build_system_prompt()
 
     i_identity = prompt.index(IDENTITY)
+    i_policy = prompt.index("# Global Operating Policy")
     i_memory = prompt.index("# Memory")
     i_project_notes = prompt.index("# Project Notes")
     i_active = prompt.index("# Active Skills")
     i_skills = prompt.index("# Skills")
 
-    assert i_identity < i_memory < i_project_notes < i_active < i_skills
+    assert i_identity < i_policy < i_memory < i_project_notes < i_active < i_skills
