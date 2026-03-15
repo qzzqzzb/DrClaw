@@ -254,6 +254,29 @@ InternClaw是什么？
 
 安装后，编辑 `~/.drclaw/config.json`，设置LLM API. 默认通过[litellm](https://docs.litellm.ai/docs/providers)
 
+正常执行安装脚本后，应该看到:
+
+```text
+DrClaw installed!
+
+  Source:  ~/.drclaw-src
+  Binary:  ~/.local/bin/drclaw
+  Config:  ~/.drclaw/config.json
+
+Next steps:
+  1. Set your API key in ~/.drclaw/config.json
+  2. Launch DrClaw:     drclaw daemon -f web
+```
+
+
+配置好 API 后，直接启动：
+
+```bash
+drclaw daemon -f web
+```
+
+默认启动后访问 `http://127.0.0.1:8080` 即可打开 Web 控制台。安装脚本已经自动执行 `drclaw onboard`.
+
 **OpenRouter:**
 ```json
 {
