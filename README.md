@@ -35,6 +35,24 @@
 bash <(curl -fsSL https://raw.githubusercontent.com/qzzqzzb/drclaw/main/install.sh)
 ```
 
+更新到最新版本：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/qzzqzzb/drclaw/main/install.sh) update
+```
+
+卸载程序本体并保留 `~/.drclaw` 数据：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/qzzqzzb/drclaw/main/install.sh) uninstall
+```
+
+彻底卸载并删除 `~/.drclaw` 数据：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/qzzqzzb/drclaw/main/install.sh) uninstall --purge-data
+```
+
 安装完成后，[配置 LLM API](#配置)以启动。
 
 ## 目录
@@ -266,6 +284,18 @@ DrClaw installed!
 Next steps:
   1. Set your API key in ~/.drclaw/config.json
   2. Launch DrClaw:     drclaw daemon -f web
+```
+
+更新 DrClaw：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/qzzqzzb/drclaw/main/install.sh) update
+```
+
+卸载程序但保留已有配置和项目数据：
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/qzzqzzb/drclaw/main/install.sh) uninstall
 ```
 
 

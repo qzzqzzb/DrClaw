@@ -25,3 +25,14 @@ def test_install_script_recommends_web_frontend_on_all_platforms() -> None:
 
     assert "Launch DrClaw:     ${BOLD}drclaw daemon -f web${RESET}" in install_script
     assert "Launch DrClaw:     ${BOLD}drclaw tray${RESET}" not in install_script
+
+
+def test_install_script_supports_update_and_uninstall_modes() -> None:
+    install_script = (ROOT / "install.sh").read_text(encoding="utf-8")
+
+    assert 'ACTION="install"' in install_script
+    assert "install|update|uninstall)" in install_script
+    assert "install.sh uninstall [--purge-data]" in install_script
+    assert "install.sh) update" in install_script
+    assert "install.sh) uninstall --purge-data" in install_script
+    assert "Preserved data:  $DRCLAW_DATA_DIR" in install_script
