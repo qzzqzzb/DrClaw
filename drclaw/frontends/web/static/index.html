@@ -1211,13 +1211,21 @@ body {
 }
 
 #chat-header-name {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
   color: #111827;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+#chat-header-loading {
+  width: 36px;
+  height: 36px;
+  display: block;
+  flex-shrink: 0;
+  animation: avatar-rotate 1.1s linear infinite;
 }
 
 .floating-chat-actions {
@@ -3777,6 +3785,9 @@ body {
     if (status !== "working") {
       delete pendingByAgent[agentId];
     }
+    if (agentId === activeAgent) {
+      updateChatHeader();
+    }
     if (isAgentsViewActive()) {
       renderMonitor();
     }
@@ -3809,6 +3820,7 @@ body {
           : withAssetCacheBust("/assets/avatars/8.png")
       )
       : withAssetCacheBust("/assets/DrClaw.png");
+    const isWorking = agent ? uiStatus(agent) === "working" : Boolean(pendingByAgent[activeAgent]);
 
     chatHeader.innerHTML = "";
     const avatarWrap = document.createElement("div");
@@ -3828,6 +3840,14 @@ body {
 
     chatHeader.appendChild(avatarWrap);
     chatHeader.appendChild(nameEl);
+    if (isWorking) {
+      const loadingEl = document.createElement("img");
+      loadingEl.id = "chat-header-loading";
+      loadingEl.src = withAssetCacheBust("/assets/loading.png");
+      loadingEl.alt = "";
+      loadingEl.setAttribute("aria-hidden", "true");
+      chatHeader.appendChild(loadingEl);
+    }
     updatePublishButtonState();
   }
 
@@ -4290,6 +4310,9 @@ body {
     if (!agentId) return;
     if (pending) pendingByAgent[agentId] = true;
     else delete pendingByAgent[agentId];
+    if (agentId === activeAgent) {
+      updateChatHeader();
+    }
     if (isAgentsViewActive()) {
       renderMonitor();
     }
