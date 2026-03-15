@@ -107,7 +107,7 @@ InternClaw是什么？
 <td width="33%"><img src="assets/demos/paper_report.png" alt="让学生写个报告"><br><em>让学生写个报告</em></td>
 </tr>
 <tr>
-<td width="33%"><img src="assets/demos/exp.py" alt="让学生跑个实验，完成后汇报"><br><em>让学生跑个实验，完成后汇报</em></td>
+<td width="33%"><img src="assets/demos/exp.png" alt="让学生跑个实验，完成后汇报"><br><em>让学生跑个实验，完成后汇报</em></td>
 <td width="33%"><img src="assets/demos/cron.png" alt="让秘书每天早上自动把新论文报告给你"><br><em>让秘书每天早上自动把新论文报告给你</em></td>
 <td width="33%"><img src="assets/demos/newton1.png" alt="直接指导学生"><br><em>直接指导学生 (1)</em></td>
 </tr>
