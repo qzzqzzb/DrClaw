@@ -294,7 +294,34 @@ class WebAdapter:
                     "text": msg.text,
                     "metadata": msg.metadata,
                 }
-                if msg.media:
+                metadata_attachments = msg.metadata.get("attachments")
+                if isinstance(metadata_attachments, list) and metadata_attachments:
+                    files = []
+                    for item in metadata_attachments:
+                        if not isinstance(item, dict):
+                            continue
+                        rec = file_store.get(str(item.get("id", "")).strip().lower())
+                        if rec is not None:
+                            files.append(file_store.public_descriptor(rec))
+                            continue
+                        download_url = item.get("download_url")
+                        if isinstance(download_url, str) and download_url.strip():
+                            files.append(
+                                {
+                                    "id": str(item.get("id", "")).strip().lower(),
+                                    "name": str(item.get("name") or "file"),
+                                    "mime": str(item.get("mime") or "application/octet-stream"),
+                                    "size": (
+                                        max(0, int(item.get("size")))
+                                        if isinstance(item.get("size"), (int, float))
+                                        else 0
+                                    ),
+                                    "download_url": download_url,
+                                }
+                            )
+                    if files:
+                        payload["files"] = files
+                elif msg.media:
                     files: list[dict] = []
                     for media_path in msg.media:
                         try:

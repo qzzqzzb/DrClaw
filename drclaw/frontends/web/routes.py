@@ -958,7 +958,11 @@ def _normalize_attachment_id(raw: Any) -> str:
     return ""
 
 
-def _sanitize_history_attachments(raw: Any) -> list[dict[str, Any]]:
+def _sanitize_history_attachments(
+    raw: Any,
+    *,
+    file_store: ChatFileStore | None = None,
+) -> list[dict[str, Any]]:
     if not isinstance(raw, list):
         return []
     out: list[dict[str, Any]] = []
@@ -967,28 +971,44 @@ def _sanitize_history_attachments(raw: Any) -> list[dict[str, Any]]:
         if not isinstance(item, dict):
             continue
         file_id = item.get("id")
-        if not isinstance(file_id, str):
-            continue
-        cleaned_id = file_id.strip().lower()
-        if not cleaned_id or cleaned_id in seen:
-            continue
         name = item.get("name")
         mime = item.get("mime")
         size = item.get("size")
         download_url = item.get("download_url")
-        out_item: dict[str, Any] = {
-            "id": cleaned_id,
-            "name": str(name) if name is not None else "file",
-            "mime": str(mime) if mime is not None else "application/octet-stream",
-            "size": max(0, int(size)) if isinstance(size, (int, float)) else 0,
-            "download_url": (
-                str(download_url)
-                if isinstance(download_url, str) and download_url.strip()
-                else ChatFileStore.download_url(cleaned_id)
-            ),
-        }
+        cleaned_id = file_id.strip().lower() if isinstance(file_id, str) else ""
+        if cleaned_id:
+            if cleaned_id in seen:
+                continue
+            out_item: dict[str, Any] = {
+                "id": cleaned_id,
+                "name": str(name) if name is not None else "file",
+                "mime": str(mime) if mime is not None else "application/octet-stream",
+                "size": max(0, int(size)) if isinstance(size, (int, float)) else 0,
+                "download_url": (
+                    str(download_url)
+                    if isinstance(download_url, str) and download_url.strip()
+                    else ChatFileStore.download_url(cleaned_id)
+                ),
+            }
+            out.append(out_item)
+            seen.add(cleaned_id)
+            continue
+
+        path_raw = item.get("path")
+        if not isinstance(path_raw, str) or not path_raw.strip() or file_store is None:
+            continue
+        try:
+            out_item = file_store.ensure_descriptor_for_path(
+                source_path=Path(path_raw),
+                filename=str(name) if name is not None else None,
+                content_type=str(mime) if mime is not None else None,
+            )
+        except (OSError, ValueError):
+            continue
+        if out_item["id"] in seen:
+            continue
         out.append(out_item)
-        seen.add(cleaned_id)
+        seen.add(out_item["id"])
     return out
 
 
@@ -1039,6 +1059,7 @@ async def handle_agent_history(request: web.Request) -> web.Response:
     kernel = request.app["kernel"]
     verbose_chat = bool(kernel.config.daemon.verbose_chat)
     show_tool_calls = bool(kernel.config.daemon.show_tool_calls) and verbose_chat
+    file_store = ChatFileStore(kernel.config.data_path)
     agent_id = request.match_info.get("agent_id", "").strip()
     if not agent_id:
         return web.json_response({"error": "Missing agent_id."}, status=400)
@@ -1062,7 +1083,7 @@ async def handle_agent_history(request: web.Request) -> web.Response:
 
         source = _message_source(raw)
         text = _normalize_history_text(raw.get("content"))
-        attachments = _sanitize_history_attachments(raw.get("attachments"))
+        attachments = _sanitize_history_attachments(raw.get("attachments"), file_store=file_store)
         tool_calls_raw = raw.get("tool_calls")
         tool_calls = tool_calls_raw if isinstance(tool_calls_raw, list) else []
 

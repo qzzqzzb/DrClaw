@@ -2069,6 +2069,7 @@ body {
   const ROUTE_STATISTICS = "#/statistics";
   const ROUTE_AGENTS_PREFIX = "#/agents/";
   const WEBUI_LANGUAGE_STORAGE_KEY = "drclaw-web-lang-v1";
+  const OFFICE_SCROLL_STORAGE_KEY = "drclaw-web-office-scroll-v1";
 
   const agentsGrid = document.getElementById("agents-grid");
   const agentsEmpty = document.getElementById("agents-empty");
@@ -2084,6 +2085,7 @@ body {
   const langSwitchEn = document.getElementById("lang-switch-en");
 
   const teamChatPanel = document.getElementById("team-chat-panel");
+  const officeArea = document.getElementById("office-area");
   const floatingChatPublishBtn = document.getElementById("floating-chat-publish");
   const chatHeader = document.getElementById("chat-header");
   const messagesEl = document.getElementById("messages");
@@ -2194,6 +2196,8 @@ body {
   let monitorWsState = "disconnected";
   let monitorRecentEventCount = 0;
   let currentLanguage = loadWebUiLanguage();
+  let pendingOfficeScrollRestore = loadOfficeScrollState();
+  let officeScrollRestoreAttempts = 0;
   let publishInFlight = false;
   const ASSET_CACHE_BUST = String(Date.now());
 
@@ -2341,6 +2345,56 @@ body {
       return table[key];
     }
     return I18N.en[key] || key;
+  }
+
+  function loadOfficeScrollState() {
+    try {
+      const raw = sessionStorage.getItem(OFFICE_SCROLL_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const top = Number(parsed && parsed.top);
+      const left = Number(parsed && parsed.left);
+      return {
+        top: Number.isFinite(top) ? Math.max(0, top) : 0,
+        left: Number.isFinite(left) ? Math.max(0, left) : 0,
+      };
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function saveOfficeScrollState() {
+    if (!officeArea) return;
+    try {
+      sessionStorage.setItem(OFFICE_SCROLL_STORAGE_KEY, JSON.stringify({
+        top: officeArea.scrollTop,
+        left: officeArea.scrollLeft,
+      }));
+    } catch (_err) {
+      // Ignore persistence errors.
+    }
+  }
+
+  function restoreOfficeScrollIfNeeded() {
+    if (!officeArea || !pendingOfficeScrollRestore) return;
+    const route = normalizeHash(window.location.hash);
+    if (route !== ROUTE_AGENTS && !route.startsWith(ROUTE_AGENTS_PREFIX)) return;
+
+    const target = pendingOfficeScrollRestore;
+    window.requestAnimationFrame(function() {
+      window.requestAnimationFrame(function() {
+        if (!officeArea || !pendingOfficeScrollRestore) return;
+        officeArea.scrollTop = target.top;
+        officeArea.scrollLeft = target.left;
+        officeScrollRestoreAttempts += 1;
+
+        const topRestored = Math.abs(officeArea.scrollTop - target.top) < 2;
+        const leftRestored = Math.abs(officeArea.scrollLeft - target.left) < 2;
+        if ((topRestored && leftRestored) || officeScrollRestoreAttempts >= 4) {
+          pendingOfficeScrollRestore = null;
+        }
+      });
+    });
   }
 
   function apiUrl(path) {
@@ -3400,7 +3454,20 @@ body {
 
 
   function renderMonitor() {
+    const savedOfficeScroll = officeArea ? {
+      top: officeArea.scrollTop,
+      left: officeArea.scrollLeft,
+    } : null;
     const models = renderAgentsPage();
+    if (officeArea && savedOfficeScroll) {
+      officeArea.scrollTop = savedOfficeScroll.top;
+      officeArea.scrollLeft = savedOfficeScroll.left;
+      window.requestAnimationFrame(function() {
+        if (!officeArea) return;
+        officeArea.scrollTop = savedOfficeScroll.top;
+        officeArea.scrollLeft = savedOfficeScroll.left;
+      });
+    }
     if (monitorSummary) {
       const agentNodeCount = models.filter(function(m) { return m.kind === "agent"; }).length;
       monitorSummary.textContent =
@@ -4303,7 +4370,6 @@ body {
     showChat();
     renderMessages();
     void loadAgentHistory(activeAgent);
-    msgInput.focus();
   }
 
   function appendTo(agentId, msg) {
@@ -4353,6 +4419,7 @@ body {
       if (isAgentsViewActive()) {
         enterChat(activeAgent);
         renderMonitor();
+        restoreOfficeScrollIfNeeded();
       }
       if (views.statistics && views.statistics.classList.contains("active")) {
         loadStatistics(true).catch(function() {});
@@ -4667,6 +4734,7 @@ body {
         enterChat(route.agentId);
       }
       renderMonitor();
+      restoreOfficeScrollIfNeeded();
       return;
     }
     hidePublishModal();
@@ -4826,8 +4894,13 @@ body {
       }
     };
   }
+  if (officeArea) {
+    officeArea.addEventListener("scroll", saveOfficeScrollState, { passive: true });
+  }
 
   window.addEventListener("hashchange", renderRoute);
+  window.addEventListener("beforeunload", saveOfficeScrollState);
+  window.addEventListener("pagehide", saveOfficeScrollState);
 
   applyLanguage(currentLanguage);
   fetchAgents();

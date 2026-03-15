@@ -17,6 +17,7 @@ from drclaw.config.schema import DrClawConfig
 from drclaw.cron.service import CronService
 from drclaw.equipment.manager import EquipmentRuntimeManager
 from drclaw.equipment.prototypes import EquipmentPrototypeStore
+from drclaw.frontends.web.chat_files import ChatFileStore
 from drclaw.models.messages import InboundMessage, OutboundMessage
 from drclaw.models.project import (
     AmbiguousProjectNameError,
@@ -306,8 +307,49 @@ class MainAgent:
         if bus is None:
             raise RuntimeError("message tool unavailable: message bus is not configured")
 
+        attachments: list[dict[str, Any]] = []
+        if msg.media:
+            file_store = ChatFileStore(self.config.data_path)
+            for media_path in msg.media:
+                try:
+                    rec = file_store.ingest_outbound_media(Path(media_path))
+                except (OSError, ValueError):
+                    continue
+                attachments.append(
+                    {
+                        "id": rec.file_id,
+                        "name": rec.name,
+                        "mime": rec.mime,
+                        "size": rec.size,
+                        "path": str(rec.path),
+                        "download_url": file_store.download_url(rec.file_id),
+                    }
+                )
+
         msg.source = self.loop.agent_id
         msg.topic = self.loop.agent_id
+        if attachments:
+            msg.metadata = dict(msg.metadata)
+            msg.metadata["attachments"] = attachments
+
+            inbound = self.loop._current_inbound
+            if (
+                inbound is not None
+                and msg.channel == inbound.channel
+                and msg.chat_id == inbound.chat_id
+            ):
+                session = self.loop._active_session
+                if session is None:
+                    session = self.session_manager.load("main")
+                session.messages.append(
+                    {
+                        "role": "assistant",
+                        "content": msg.text,
+                        "source": self.loop.agent_id,
+                        "attachments": attachments,
+                    }
+                )
+                self.session_manager.save(session)
         await bus.publish_outbound(msg)
 
     def _current_webui_language(self) -> str:

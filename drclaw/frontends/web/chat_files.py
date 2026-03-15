@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import mimetypes
 import shutil
@@ -209,3 +210,48 @@ class ChatFileStore:
             "size": rec.size,
             "download_url": self.download_url(rec.file_id),
         }
+
+    def ensure_descriptor_for_path(
+        self,
+        *,
+        source_path: Path,
+        filename: str | None = None,
+        content_type: str | None = None,
+    ) -> dict[str, Any]:
+        """Ensure a legacy in-data-path attachment has a downloadable descriptor."""
+        resolved = source_path.resolve()
+        if not resolved.exists() or not resolved.is_file():
+            raise ValueError(f"Media file not found: {source_path}")
+        if not resolved.is_relative_to(self._data_path):
+            raise ValueError(f"Media file outside data directory: {source_path}")
+
+        safe_name = self._safe_name(filename or resolved.name)
+        mime = self._mime(safe_name, content_type)
+        size = self._size(resolved)
+        file_id = hashlib.md5(
+            f"{resolved}:{size}:{resolved.stat().st_mtime_ns}:{safe_name}:{mime}".encode("utf-8")
+        ).hexdigest()
+
+        existing = self.get(file_id)
+        if existing is not None:
+            return self.public_descriptor(existing)
+
+        suffix = Path(safe_name).suffix
+        stored_name = f"{file_id}{suffix}" if suffix else file_id
+        stored_path = (self._files_dir / stored_name).resolve()
+        if not stored_path.is_relative_to(self._files_dir.resolve()):
+            raise ValueError("Stored file path escapes storage root.")
+        if resolved != stored_path:
+            shutil.copy2(resolved, stored_path)
+
+        rec = ChatFileRecord(
+            file_id=file_id,
+            name=safe_name,
+            mime=mime,
+            size=size,
+            path=stored_path,
+            created_at=self._now_iso(),
+            source="history",
+        )
+        self._write_meta(rec)
+        return self.public_descriptor(rec)
