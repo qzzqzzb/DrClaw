@@ -60,13 +60,14 @@ def _make_provider(config: DrClawConfig):  # noqa: ANN201
     """Build an LLM provider from config. Routes OAuth providers to dedicated implementations."""
     from drclaw.providers.registry import find_by_model
 
-    spec = find_by_model(config.provider.model)
+    provider_config = config.active_provider_config
+    spec = find_by_model(provider_config.model)
 
     if spec and spec.name == "openai_codex":
         from drclaw.providers.openai_codex_provider import OpenAICodexProvider
 
         return OpenAICodexProvider(
-            config.provider,
+            provider_config,
             max_tokens=config.agent.max_tokens,
             temperature=config.agent.temperature,
         )
@@ -74,7 +75,7 @@ def _make_provider(config: DrClawConfig):  # noqa: ANN201
     from drclaw.providers.litellm_provider import LiteLLMProvider
 
     return LiteLLMProvider(
-        config.active_provider_config,
+        provider_config,
         max_tokens=config.agent.max_tokens,
         temperature=config.agent.temperature,
     )
