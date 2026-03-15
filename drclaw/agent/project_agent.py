@@ -18,6 +18,8 @@ from drclaw.equipment.prototypes import EquipmentPrototypeStore
 from drclaw.models.project import Project
 from drclaw.providers.base import LLMProvider
 from drclaw.remote_tmux.store import RemoteTmuxSessionStore
+from drclaw.sandbox.backends import DockerSandboxBackend
+from drclaw.sandbox.manager import SandboxJobManager
 from drclaw.session.manager import SessionManager
 from drclaw.soul import load_project_soul
 from drclaw.tools.background_tasks import (
@@ -47,6 +49,14 @@ from drclaw.tools.remote_tmux import (
     TerminateRemoteTmuxSessionTool,
 )
 from drclaw.tools.registry import ToolRegistry
+from drclaw.tools.sandbox_jobs import (
+    CancelSandboxJobTool,
+    CreateJobTool,
+    GetSandboxJobStatusTool,
+    ListActiveSandboxJobsTool,
+    PauseSandboxJobTool,
+    ResumeSandboxJobTool,
+)
 from drclaw.utils.helpers import ensure_dir
 
 if TYPE_CHECKING:
@@ -85,6 +95,7 @@ class ProjectAgent:
         project: Project,
         debug_logger: DebugLogger | None = None,
         equipment_manager: EquipmentRuntimeManager | None = None,
+        sandbox_job_manager: SandboxJobManager | None = None,
         env_store: EnvStore | None = None,
         claude_code_manager: ClaudeCodeSessionManager | None = None,
         external_agent_bridge: ExternalAgentBridge | None = None,
@@ -106,6 +117,12 @@ class ProjectAgent:
             provider=provider,
             config=config,
             env_store=self.env_store,
+        )
+        sandbox_runtime_root = config.data_path / "runtime" / "sandbox_jobs"
+        sandbox_runtime_root.mkdir(parents=True, exist_ok=True)
+        self.sandbox_job_manager = sandbox_job_manager or SandboxJobManager(
+            runtime_root=sandbox_runtime_root,
+            backend=DockerSandboxBackend(),
         )
 
         self.memory_store = MemoryStore(project_dir)
@@ -149,6 +166,19 @@ class ProjectAgent:
             )
         )
         tool_registry.register(GetEquipmentRunStatusTool(self.equipment_manager))
+        tool_registry.register(
+            CreateJobTool(self.sandbox_job_manager, caller_agent_id=caller_agent_id)
+        )
+        tool_registry.register(
+            ListActiveSandboxJobsTool(
+                self.sandbox_job_manager,
+                caller_agent_id=caller_agent_id,
+            )
+        )
+        tool_registry.register(GetSandboxJobStatusTool(self.sandbox_job_manager))
+        tool_registry.register(PauseSandboxJobTool(self.sandbox_job_manager))
+        tool_registry.register(ResumeSandboxJobTool(self.sandbox_job_manager))
+        tool_registry.register(CancelSandboxJobTool(self.sandbox_job_manager))
         if external_agent_bridge is not None:
             tool_registry.register(
                 CallExternalAgentTool(
