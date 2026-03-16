@@ -147,6 +147,7 @@ InternClaw是什么？
   </a>
 </p>
 
+<!--
 ### 自动迭代方案，实时追踪进度
 
 <p align="center">
@@ -155,6 +156,15 @@ InternClaw是什么？
   </a>
   <a href="assets/demos/demo-intern-ml-res.jpg">
     <img src="assets/demos/demo-intern-ml-res.jpg" alt="自动迭代方案与实时进度追踪示例 2" height="320" style="margin-left: 8px;" />
+  </a>
+</p>
+-->
+
+### 稍微放松一下，和虾摸一起摸个鱼
+
+<p align="center">
+  <a href="assets/demo-xiamo.gif">
+    <img src="assets/demo-xiamo.gif" alt="和虾摸一起摸个鱼" height="420" />
   </a>
 </p>
 
