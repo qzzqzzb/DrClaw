@@ -100,6 +100,7 @@ InternClaw是什么？
 
 作为PI，你只需要对秘书说出你想做什么：
 
+<!--
 <table>
 <tr>
 <td width="33%"><img src="assets/demos/new_student.png" alt="招个新学生来干活"><br><em>招个新学生来干活</em></td>
@@ -122,6 +123,33 @@ InternClaw是什么？
 <td width="33%"><img src="assets/demos/today_paper.png" alt="记录今天看过的论文"><br><em>记录今天看过的论文</em></td>
 </tr>
 </table>
+-->
+
+### 比如，你可以直接让 agent 接入远程服务器运行实验，并在完成后回传结果：
+
+<p align="center">
+  <img src="assets/demos/exp_xiami_long.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 1" width="100%" />
+</p>
+
+<p align="center">
+  <img src="assets/demos/exp_ssh_long.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 2" width="100%" />
+</p>
+
+### 使用InternAgent平台完成ENSO模型比较，直接生成论文中可用图片
+
+<p align="center">
+  <img src="assets/demos/demo-internagent-enso.gif" alt="使用 InternAgent 平台完成 ENSO 模型比较并直接生成论文可用图片" width="100%" />
+</p>
+
+### 自动迭代方案，实时追踪进度
+
+<p align="center">
+  <img src="assets/demo-internagent-ml-1.jpg" alt="自动迭代方案与实时进度追踪示例 1" width="100%" />
+</p>
+
+<p align="center">
+  <img src="assets/demos/demo-intern-ml-res.jpg" alt="自动迭代方案与实时进度追踪示例 2" width="100%" />
+</p>
 
 我们预设了200+科学技能以及10+智能体（学生）模版来帮助你完成科研中的各种任务
 
