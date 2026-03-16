@@ -133,6 +133,16 @@ InternClaw内置了10+个开箱即用的各式智能体，基于200+科研技能
 
 作为PI，你只需要对秘书说出你想做什么：
 
+### 让学生找一下最新的论文
+
+<p align="center">
+  <a href="assets/demos/paper_report1.png">
+    <img src="assets/demos/paper_report1.png" alt="让学生找一下最新的论文示例 1" height="320" />
+  </a>
+  <a href="assets/demos/papre_report2.png">
+    <img src="assets/demos/papre_report2.png" alt="让学生找一下最新的论文示例 2" height="320" style="margin-left: 8px;" />
+  </a>
+</p>
 
 ### 让 agent 接入远程服务器运行实验，并在完成后回传结果：
 
