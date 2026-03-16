@@ -39,8 +39,9 @@ bash <(curl -fsSL https://raw.githubusercontent.com/qzzqzzb/drclaw/main/install.
 
 ## 目录
 
-- [InternClaw是什么](#internclaw-你的全自动赛博科研流水线)
+- [InternClaw: 你的7✖️24科研团队](#internclaw-你的724科研团队)
 - [快速上手](#快速上手)
+- [使用案例](#使用案例)
 - [项目结构](#项目结构)
 - [特点](#特点)
 - [安全防护](#安全防护)
@@ -132,7 +133,8 @@ InternClaw内置了10+个开箱即用的各式智能体，基于200+科研技能
 
 作为PI，你只需要对秘书说出你想做什么：
 
-### 比如，你可以直接让 agent 接入远程服务器运行实验，并在完成后回传结果：
+
+### 让 agent 接入远程服务器运行实验，并在完成后回传结果：
 
 <p align="center">
   <a href="assets/demos/exp_xiami_hor.png">
@@ -186,7 +188,6 @@ InternClaw内置了10+个开箱即用的各式智能体，基于200+科研技能
   </a>
 </p>
 
-我们预设了200+科学技能以及10+智能体（学生）模版来帮助你完成科研中的各种任务
 
 ## 项目结构
 
