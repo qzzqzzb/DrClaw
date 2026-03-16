@@ -1,0 +1,9 @@
+name: daily-paper-logger
+description: logging paper read today from browsing history
+i18n:
+  zh:
+    name: 虾记录
+    description: 每日论文摘要记录 agent，从浏览记录中识别所有今天看过的论文
+tags: []
+goals: []
+equipment_refs: []
