@@ -12,23 +12,12 @@ A .docx file is a ZIP archive containing XML files.
 
 ## Execution Policy
 
-Prefer local execution first for `.docx` operations when the required tools are already available.
+Use local execution for `.docx` operations in this project.
 
-If you attempt sandboxed execution and the sandbox cannot start or access its backend, do not stop there. Fall back to direct local `exec` with the same workflow whenever the current environment can run the needed commands.
-
-Typical sandbox failures that require fallback include:
-- Docker or sandbox backend permission errors
-- sandbox job startup failures
-- temporary sandbox runtime unavailability
-
-When falling back:
+- do not use sandbox jobs for `.docx` processing here
 - do not read `.docx` as plain text
-- use `pandoc`, `soffice.py`, `unpack.py`, `pack.py`, or related scripts through direct `exec`
-- report missing local dependencies clearly only after local execution is no longer possible
-
-Only return failure after both paths have been considered:
-1. sandbox execution
-2. direct local `exec`
+- use `pandoc`, `soffice.py`, `unpack.py`, `pack.py`, or related scripts through local `exec`
+- report missing local dependencies clearly if the required commands are unavailable
 
 ## Path Resolution Rules
 
@@ -462,6 +451,26 @@ The required completion path is:
 6. return the new `.docx` path
 
 If step 4 or step 5 is not completed, the document-editing task is not complete.
+
+### Verification Rule For Rewrite Tasks
+
+Do not claim the document was rewritten unless you can verify that the editable text changed.
+
+Minimum verification steps:
+
+1. save the extracted source text to a workspace artifact such as `source_extracted.txt`
+2. save the rewritten text or paragraph mapping to a workspace artifact such as `rewritten.txt` or `rewrites.json`
+3. confirm that the rewritten text is not identical to the source text
+4. after packing, extract text from the output `.docx` and confirm it differs from the source text
+
+If the extracted source text and output text are identical, treat the task as failed or incomplete.
+Do not report success in that case.
+
+In the final report for document rewrites, include:
+
+- the output `.docx` path
+- how many paragraphs or text units changed
+- one short note if the rewrite had to stay conservative
 
 ### Step 1: Unpack
 ```bash
