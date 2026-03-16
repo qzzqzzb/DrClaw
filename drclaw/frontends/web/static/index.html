@@ -154,6 +154,17 @@ body {
   padding: 16px;
 }
 
+.page-note {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .empty-page {
   height: 100%;
   display: flex;
@@ -1780,6 +1791,10 @@ body {
   <section id="agent-hub-view" class="view page">
     <div id="header-agent-hub" class="page-header" data-i18n="header_agent_hub">Agent Store</div>
     <div class="page-body">
+      <div class="page-note" data-i18n="agent_hub_activation_notice">
+        Agents on this page cannot be recognized by Alice (the main agent) until they are activated.
+        The main agent cannot call inactive agents from this page. Activate an agent first before using it.
+      </div>
       <div id="hub-grid"></div>
       <div id="hub-empty" class="empty-page" style="display:none">No templates available</div>
     </div>
@@ -2210,6 +2225,7 @@ body {
       nav_config: "Config",
       header_my_team: "My Lab",
       header_agent_hub: "Agent Store",
+      agent_hub_activation_notice: "Agents on this page cannot be recognized by Alice (the main agent) until they are activated. The main agent cannot call inactive agents from this page. Activate an agent first before using it.",
       header_config: "Config",
       header_skills: "Skills Store",
       header_statistics: "Statistics",
@@ -2267,6 +2283,7 @@ body {
       nav_config: "配置",
       header_my_team: "我的实验室",
       header_agent_hub: "智能体商店",
+      agent_hub_activation_notice: "此页面中的智能体在激活前无法被虾秘（主智能体）识别。虾秘无法直接调用此页面中未激活的智能体。如需使用某个智能体，请务必先激活。",
       header_config: "配置",
       header_skills: "技能商店",
       header_statistics: "用量统计",
