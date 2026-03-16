@@ -1759,7 +1759,7 @@ body {
           </div>
           <div id="chat-empty" style="display:flex">Select an agent to start chatting</div>
           <div id="messages"></div>
-          <div id="input-bar">
+          <div id="input-bar" style="display:none">
             <div id="chat-file-pending"></div>
             <div id="chat-input-row">
               <input id="chat-file-input" type="file" multiple style="display:none">
@@ -4730,9 +4730,7 @@ body {
     setActiveView(route.view);
 
     if (route.view === "agents") {
-      if (route.agentId) {
-        enterChat(route.agentId);
-      }
+      enterChat(route.agentId || activeAgent);
       renderMonitor();
       restoreOfficeScrollIfNeeded();
       return;

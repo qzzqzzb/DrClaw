@@ -39,8 +39,9 @@ bash <(curl -fsSL https://raw.githubusercontent.com/qzzqzzb/drclaw/main/install.
 
 ## 目录
 
-- [InternClaw是什么](#internclaw-你的全自动赛博科研流水线)
+- [InternClaw: 你的7✖️24科研团队](#internclaw-你的724科研团队)
 - [快速上手](#快速上手)
+- [使用案例](#使用案例)
 - [项目结构](#项目结构)
 - [特点](#特点)
 - [安全防护](#安全防护)
@@ -52,54 +53,58 @@ bash <(curl -fsSL https://raw.githubusercontent.com/qzzqzzb/drclaw/main/install.
 - [附录](#附录)
 
 
-## InternClaw: 你的全自动赛博科研流水线
+## InternClaw: 你的7✖️24科研团队
 
-InternClaw是什么？
+InternClaw不能：
 
-这个问题的答案取决于你 -- 你在每周的科研中做什么，InternClaw就是什么。
+- ❌ 产生科研兴趣
+- ❌ 给你发博士录取通知书
+- ❌ 答辩
+- ❌ 授予你博士学位
+- ❌ 在院士评选中投票给你
 
-它可以把你一周的科研任务打包自动化：读论文、做实验、写代码、跑结果、画图、写报告。
 
-你唯一需要做的事情是：
 
-虾们，帮我搞清楚这个问题。
+InternClaw可以：
 
-然后看着一群 龙虾博士生 🦞 开始干活。
+- ✅ 让你专注于你真正感兴趣的科研，节省你花费在科研杂活上的时间
+- ✅ 在你收到录取通知书的时候告诉你
+- ✅ 帮你在答辩前整理成果，下载论文模版，提醒你格式有错误
+- ✅ 换个title称呼你
+- ✅ 有一定概率增大你参与评选的概率
 
-### 🦞 什么是龙虾博士生？
+还可以：
 
-| 真人类博士生 🧑‍🎓 | 龙虾博士生 🦞 |
+- ✅ 自动搜集、推送你可能感兴趣的最新论文，免去你一篇一篇翻阅的烦恼。
+- ✅ 编写、修改实验代码，并监控实验进度，完成式自动告知你结果如何。
+- ✅ 解决繁琐的文案工作 -- 在组会前没时间做ppt写报告？让InternClaw基于你的项目进展，自动生成。
+- ✅ 在科研压力山大时和虾摸玩个小游戏，放松一下科研效率更高。
+- ✅ 节省你的时间去思考更重要的事情，而不是在不得不做的琐事中迷失自己。
+
+
+InternClaw内置了10+个开箱即用的各式智能体，基于200+科研技能提供多维度的科研支持，让你在几分钟内就可以组建自己的科研支持团队，招贤纳虾：
+
+| 分类 | 智能体 |
 | :--- | :--- |
-| 会因为跑不出结果而深夜 emo | 遇到 Error 只会无情捕捉异常并重试 |
-| 会拖延，DDL 前一天才打开 Overleaf | 接到指令的第一秒，CPU 利用率直接拉满 |
-| 需要时间学习，理解，记忆 | 多学科预设，一秒精通所有学科知识，永不遗忘 |
-| **他们总有一天会毕业** | **龙虾永远不会毕业。** |
+| 通用科研 | 虾看论文 <img src="./assets/avatars/18.png" alt="虾看论文" height="36" />，脑洞虾，虾跑实验 <img src="./assets/avatars/3.png" alt="虾跑实验" height="36" /> |
+| 学科专用 | 虾顿 <img src="./assets/avatars/0.png" alt="虾顿" height="36" />（物理），拉瓦虾 <img src="./assets/avatars/1.png" alt="拉瓦虾" height="36" />（化学），高蛋白深海虾（蛋白组学），基因虾 <img src="./assets/avatars/4.png" alt="基因虾" height="36" />（基因组学），地科虾（地球科学），我不是药虾 <img src="./assets/avatars/5.png" alt="我不是药虾" height="36" />（药学）。。。。 |
+| 科研杂活 | 虾报告 <img src="./assets/avatars/6.png" alt="虾报告" height="36" />，虾写本子，虾做ppt，虾记录 |
+| 情感陪伴 | 虾摸，虾夸，虾猫 <img src="./assets/avatars/19.png" alt="虾猫" height="36" /> |
 
-龙虾博士生是一群不会毕业、不会拖延、不会摆烂的科研代理。
 
-每只龙虾都擅长不同科研技能/学科领域：
-
-📚 **虾看论文**/
-🧪 **虾跑实验**/
-📊 **虾做分析**/
-✍️ **虾写报告**
-
-以及10+个学科专用科研龙虾，集成200+学科深度科研技能库
-
-### 沉浸式PI角色扮演
-
-在这个系统里，作为PI的你只负责三件事：
-
-- 指点江山 PI > 调研一下最近三年关于 X 的方法
-
-- 下指令 PI > 做一个 baseline 实验
-
-- 骂龙虾 PI > 这个结果不对，重新跑
 
 ## 快速上手
 
-作为PI，你只需要对秘书说出你想做什么：
+### 你可以从智能体商店中一键导入预设智能体，迅速搭建自己的科研工作流：
 
+<p align="center">
+  <a href="https://youtu.be/aKUg_n3uw9k">
+    <img src="https://img.youtube.com/vi/aKUg_n3uw9k/hqdefault.jpg" alt="从智能体商店一键导入预设模版，迅速搭建科研工作流" height="384" />
+  </a>
+</p>
+
+
+<!--
 <table>
 <tr>
 <td width="33%"><img src="assets/demos/new_student.png" alt="招个新学生来干活"><br><em>招个新学生来干活</em></td>
@@ -122,8 +127,77 @@ InternClaw是什么？
 <td width="33%"><img src="assets/demos/today_paper.png" alt="记录今天看过的论文"><br><em>记录今天看过的论文</em></td>
 </tr>
 </table>
+-->
 
-我们预设了200+科学技能以及10+智能体（学生）模版来帮助你完成科研中的各种任务
+## 使用案例
+
+作为PI，你只需要对秘书说出你想做什么：
+
+### 让学生找一下最新的论文
+
+<p align="center">
+  <a href="assets/demos/paper_report1.png">
+    <img src="assets/demos/paper_report1.png" alt="让学生找一下最新的论文示例 1" height="320" />
+  </a>
+  <a href="assets/demos/papre_report2.png">
+    <img src="assets/demos/papre_report2.png" alt="让学生找一下最新的论文示例 2" height="320" style="margin-left: 8px;" />
+  </a>
+</p>
+
+### 让 agent 接入远程服务器运行实验，并在完成后回传结果：
+
+<p align="center">
+  <a href="assets/demos/exp_xiami_hor.png">
+    <img src="assets/demos/exp_xiami_hor.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 1" height="260" />
+  </a>
+</p>
+
+<p align="center">
+  <a href="assets/demos/exp_ssh_hor.png">
+    <img src="assets/demos/exp_ssh_hor.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 2" height="260" />
+  </a>
+</p>
+
+### 使用InternAgent平台完成ENSO模型比较，直接生成论文中可用图片
+
+<p align="center">
+  <a href="assets/demos/demo-internagent-enso.gif">
+    <img src="assets/demos/demo-internagent-enso.gif" alt="使用 InternAgent 平台完成 ENSO 模型比较并直接生成论文可用图片" height="420" />
+  </a>
+</p>
+
+### 基于已有成果进行基金申请书的写作
+
+<p align="center">
+  <a href="assets/demos/proposal_writing_agent.png">
+    <img src="assets/demos/proposal_writing_agent.png" alt="基于已有成果进行基金申请书写作示例 1" height="320" />
+  </a>
+  <a href="assets/demos/proposal_writing_res.png">
+    <img src="assets/demos/proposal_writing_res.png" alt="基于已有成果进行基金申请书写作示例 2" height="320" style="margin-left: 8px;" />
+  </a>
+</p>
+
+<!--
+### 自动迭代方案，实时追踪进度
+
+<p align="center">
+  <a href="assets/demo-internagent-ml-1.jpg">
+    <img src="assets/demo-internagent-ml-1.jpg" alt="自动迭代方案与实时进度追踪示例 1" height="320" />
+  </a>
+  <a href="assets/demos/demo-intern-ml-res.jpg">
+    <img src="assets/demos/demo-intern-ml-res.jpg" alt="自动迭代方案与实时进度追踪示例 2" height="320" style="margin-left: 8px;" />
+  </a>
+</p>
+-->
+
+### 稍微放松一下，和虾摸一起摸个鱼
+
+<p align="center">
+  <a href="assets/demo-xiamo.gif">
+    <img src="assets/demo-xiamo.gif" alt="和虾摸一起摸个鱼" height="420" />
+  </a>
+</p>
+
 
 ## 项目结构
 
