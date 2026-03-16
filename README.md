@@ -128,27 +128,37 @@ InternClaw是什么？
 ### 比如，你可以直接让 agent 接入远程服务器运行实验，并在完成后回传结果：
 
 <p align="center">
-  <img src="assets/demos/exp_xiami_long.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 1" width="100%" />
+  <a href="assets/demos/exp_xiami_long.png">
+    <img src="assets/demos/exp_xiami_long.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 1" height="420" />
+  </a>
 </p>
 
 <p align="center">
-  <img src="assets/demos/exp_ssh_long.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 2" width="100%" />
+  <a href="assets/demos/exp_ssh_long.png">
+    <img src="assets/demos/exp_ssh_long.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 2" height="420" />
+  </a>
 </p>
 
 ### 使用InternAgent平台完成ENSO模型比较，直接生成论文中可用图片
 
 <p align="center">
-  <img src="assets/demos/demo-internagent-enso.gif" alt="使用 InternAgent 平台完成 ENSO 模型比较并直接生成论文可用图片" width="100%" />
+  <a href="assets/demos/demo-internagent-enso.gif">
+    <img src="assets/demos/demo-internagent-enso.gif" alt="使用 InternAgent 平台完成 ENSO 模型比较并直接生成论文可用图片" height="420" />
+  </a>
 </p>
 
 ### 自动迭代方案，实时追踪进度
 
 <p align="center">
-  <img src="assets/demo-internagent-ml-1.jpg" alt="自动迭代方案与实时进度追踪示例 1" width="100%" />
+  <a href="assets/demo-internagent-ml-1.jpg">
+    <img src="assets/demo-internagent-ml-1.jpg" alt="自动迭代方案与实时进度追踪示例 1" height="420" />
+  </a>
 </p>
 
 <p align="center">
-  <img src="assets/demos/demo-intern-ml-res.jpg" alt="自动迭代方案与实时进度追踪示例 2" width="100%" />
+  <a href="assets/demos/demo-intern-ml-res.jpg">
+    <img src="assets/demos/demo-intern-ml-res.jpg" alt="自动迭代方案与实时进度追踪示例 2" height="420" />
+  </a>
 </p>
 
 我们预设了200+科学技能以及10+智能体（学生）模版来帮助你完成科研中的各种任务
