@@ -131,6 +131,9 @@ class AgentRegistry:
                 p, interactive=True, debug_logger=debug_logger,
             ),
             on_project_remove=self.remove_project_agent,
+            ensure_project_active=lambda p: self.activate_project(
+                p, interactive=True, debug_logger=debug_logger,
+            ),
             equipment_manager=self.equipment_manager,
             sandbox_job_manager=self.sandbox_job_manager,
             env_store=self.env_store,

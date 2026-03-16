@@ -1,7 +1,8 @@
-"""Main Agent orchestrator — top-level routing agent."""
+"""Main Agent orchestrator - top-level routing agent."""
 
 from __future__ import annotations
 
+import inspect
 import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
@@ -100,7 +101,7 @@ def _build_identity(
     else:
         lines = ["\n\n## Active Students (Project-Backed)"]
         for p in projects:
-            desc = f" — {p.description}" if p.description else ""
+            desc = f" - {p.description}" if p.description else ""
             lines.append(f"- [{p.id}] {p.name}{desc} ({p.status})")
         identity = base + "\n".join(lines)
     if response_language == "zh":
@@ -130,6 +131,7 @@ class MainAgent:
         debug_logger: DebugLogger | None = None,
         on_project_create: Callable[[Project], Any] | None = None,
         on_project_remove: Callable[[str], Awaitable[Any] | Any] | None = None,
+        ensure_project_active: Callable[[Project], Awaitable[Any] | Any] | None = None,
         equipment_manager: EquipmentRuntimeManager | None = None,
         sandbox_job_manager: SandboxJobManager | None = None,
         env_store: EnvStore | None = None,
@@ -168,6 +170,7 @@ class MainAgent:
         self.cron_service = cron_service or CronService(data_dir / "cron" / "jobs.json")
         self.memory_store = MemoryStore(data_dir)
         self.session_manager = SessionManager(data_dir / "sessions")
+        self._ensure_project_active = ensure_project_active
 
         def env_provider() -> dict[str, str]:
             return self.env_store.get_effective_env("main")
@@ -400,6 +403,10 @@ class MainAgent:
         self.equipment_manager.bus = bus
         self.sandbox_job_manager.bus = bus
         if bus is not None:
+            if self._ensure_project_active is not None:
+                maybe = self._ensure_project_active(project)
+                if inspect.isawaitable(maybe):
+                    await maybe
             origin = self.loop._current_inbound
             channel = origin.channel if origin else "cli"
             chat_id = origin.chat_id if origin else f"proj-{project.id}"

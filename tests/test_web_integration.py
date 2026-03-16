@@ -1719,6 +1719,48 @@ async def test_ws_chat_publishes_inbound(kernel, adapter):
 
 
 @pytest.mark.asyncio
+async def test_ws_chat_to_main_includes_active_agents_metadata(kernel, adapter):
+    now = datetime.now(tz=timezone.utc)
+    main_handle = kernel.registry.get.return_value
+    project = Project(
+        id="demo-proj-active-list",
+        name="Cat",
+        created_at=now,
+        updated_at=now,
+    )
+    project_handle = MagicMock(spec=AgentHandle)
+    project_handle.agent_id = f"proj:{project.id}"
+    project_handle.label = project.name
+    project_handle.agent_type = "project"
+    project_handle.project = project
+    project_handle.status = AgentStatus.RUNNING
+    kernel.registry.list_agents.return_value = [main_handle, project_handle]
+
+    app = _make_app(kernel, adapter)
+    async with TestClient(TestServer(app)) as client:
+        ws = await client.ws_connect("/ws")
+
+        await ws.send_json({
+            "type": "chat",
+            "agent_id": "main",
+            "text": "hello",
+        })
+
+        msg = await kernel.bus.consume_inbound("main")
+        active_agents = msg.metadata.get("active_agents")
+        assert isinstance(active_agents, list)
+        assert active_agents == [
+            {
+                "id": f"proj:{project.id}",
+                "name": project.name,
+                "role": "project",
+            }
+        ]
+
+        await ws.close()
+
+
+@pytest.mark.asyncio
 async def test_ws_chat_publishes_uploaded_file_attachments(kernel, adapter):
     app = _make_app(kernel, adapter)
     async with TestClient(TestServer(app)) as client:

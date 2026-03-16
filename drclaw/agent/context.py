@@ -131,6 +131,36 @@ class ContextBuilder:
         return out
 
     @staticmethod
+    def _runtime_active_agents(runtime_metadata: dict[str, Any] | None) -> list[dict[str, str]]:
+        if not runtime_metadata:
+            return []
+        raw = runtime_metadata.get("active_agents")
+        if not isinstance(raw, list):
+            return []
+        out: list[dict[str, str]] = []
+        seen: set[str] = set()
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            agent_id = item.get("id")
+            if not isinstance(agent_id, str):
+                continue
+            clean_id = agent_id.strip()
+            if not clean_id or clean_id in seen:
+                continue
+            name = item.get("name")
+            role = item.get("role")
+            out.append(
+                {
+                    "id": clean_id,
+                    "name": str(name).strip() if isinstance(name, str) and name.strip() else clean_id,
+                    "role": str(role).strip() if isinstance(role, str) and role.strip() else "",
+                }
+            )
+            seen.add(clean_id)
+        return out
+
+    @staticmethod
     def _build_runtime_context(
         channel: str | None,
         chat_id: str | None,
@@ -144,6 +174,16 @@ class ContextBuilder:
         webui_lang = ContextBuilder._webui_language_hint(runtime_metadata)
         if webui_lang:
             lines.append(f"WebUI Preferred Response Language: {webui_lang}")
+        active_agents = ContextBuilder._runtime_active_agents(runtime_metadata)
+        if active_agents:
+            lines.append("Active Agents:")
+            for item in active_agents:
+                role = item.get("role", "")
+                role_suffix = f" | role={role}" if role else ""
+                lines.append(
+                    f"- {item.get('name', item.get('id', 'agent'))} | "
+                    f"id={item.get('id', '')}{role_suffix}"
+                )
         attachments = ContextBuilder._runtime_attachments(runtime_metadata)
         if attachments:
             lines.append("Attached Files:")

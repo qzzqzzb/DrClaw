@@ -486,6 +486,31 @@ async def test_route_with_bus_publishes_to_topic(
 
 
 @pytest.mark.asyncio
+async def test_route_with_bus_ensures_project_is_active_before_publish(
+    config: DrClawConfig, mock_provider: MockProvider
+) -> None:
+    ensure_project_active = AsyncMock()
+    agent = MainAgent(
+        config,
+        mock_provider,
+        ensure_project_active=ensure_project_active,
+    )
+    bus = MessageBus()
+    agent.loop.bus = bus
+
+    project = agent.project_store.create_project("Cat")
+    topic = f"proj:{project.id}"
+
+    result = await agent._route_to_project(project, "hello cat")
+
+    assert "Routed to Cat" in result
+    ensure_project_active.assert_awaited_once_with(project)
+    msg = await asyncio.wait_for(bus.consume_inbound(topic), timeout=1.0)
+    assert msg.text == "hello cat"
+    assert msg.source == "main"
+
+
+@pytest.mark.asyncio
 async def test_route_with_bus_forwards_and_stages_attachments_for_project(
     config: DrClawConfig,
     mock_provider: MockProvider,

@@ -822,6 +822,49 @@ def _agent_display_name_map_for_statistics(kernel, *, locale: str) -> dict[str, 
     return names
 
 
+def _active_agents_for_runtime_context(kernel) -> list[dict[str, str]]:
+    out: list[dict[str, str]] = []
+    seen: set[str] = set()
+
+    for handle in kernel.registry.list_agents():
+        if handle.agent_id == "main" or handle.status != AgentStatus.RUNNING:
+            continue
+        name = (
+            handle.project.name
+            if handle.project is not None and handle.project.name
+            else handle.label or handle.agent_id
+        )
+        role = "project" if handle.agent_type == "project" else "main"
+        if handle.agent_id not in seen:
+            out.append({"id": handle.agent_id, "name": name, "role": role})
+            seen.add(handle.agent_id)
+
+    for runtime in kernel.equipment_manager.list_runtime_agents():
+        runtime_id = runtime.get("id")
+        if not isinstance(runtime_id, str) or not runtime_id or runtime_id in seen:
+            continue
+        label = runtime.get("label")
+        name = label if isinstance(label, str) and label.strip() else runtime_id
+        out.append({"id": runtime_id, "name": name, "role": "equipment"})
+        seen.add(runtime_id)
+
+    for external in kernel.external_agent_bridge.list_agent_payloads():
+        external_id = external.get("id")
+        if not isinstance(external_id, str) or not external_id or external_id in seen:
+            continue
+        name = external.get("name")
+        out.append(
+            {
+                "id": external_id,
+                "name": name if isinstance(name, str) and name.strip() else external_id,
+                "role": "external",
+            }
+        )
+        seen.add(external_id)
+
+    return out
+
+
 async def handle_agents(request: web.Request) -> web.Response:
     kernel = request.app["kernel"]
     locale = _request_locale(request)
@@ -1987,6 +2030,8 @@ async def handle_ws(request: web.Request) -> web.WebSocketResponse:
                     continue
                 if attachments:
                     metadata["attachments"] = attachments
+                if agent_id == "main":
+                    metadata["active_agents"] = _active_agents_for_runtime_context(kernel)
 
                 if not agent_id or (not text and not attachments):
                     await ws.send_json(

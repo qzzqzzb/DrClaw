@@ -140,6 +140,22 @@ def test_runtime_context_ignores_invalid_webui_language_hint() -> None:
     assert "WebUI Preferred Response Language" not in ctx
 
 
+def test_runtime_context_includes_active_agents() -> None:
+    ctx = ContextBuilder._build_runtime_context(
+        "web",
+        "chat-1",
+        {
+            "active_agents": [
+                {"id": "proj:cat-1", "name": "Cat", "role": "project"},
+                {"id": "equip:web", "name": "Web Search", "role": "equipment"},
+            ]
+        },
+    )
+    assert "Active Agents:" in ctx
+    assert "Cat | id=proj:cat-1 | role=project" in ctx
+    assert "Web Search | id=equip:web | role=equipment" in ctx
+
+
 # ---------------------------------------------------------------------------
 # add_assistant_message
 # ---------------------------------------------------------------------------
