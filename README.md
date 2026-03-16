@@ -129,13 +129,10 @@ InternClaw是什么？
 
 <p align="center">
   <a href="assets/demos/exp_xiami_long.png">
-    <img src="assets/demos/exp_xiami_long.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 1" height="420" />
+    <img src="assets/demos/exp_xiami_long.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 1" height="320" />
   </a>
-</p>
-
-<p align="center">
   <a href="assets/demos/exp_ssh_long.png">
-    <img src="assets/demos/exp_ssh_long.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 2" height="420" />
+    <img src="assets/demos/exp_ssh_long.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 2" height="320" style="margin-left: 8px;" />
   </a>
 </p>
 
