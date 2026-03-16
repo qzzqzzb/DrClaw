@@ -148,9 +148,22 @@ ensure_git() {
     command -v git >/dev/null 2>&1 || die "git not found. Install git first."
 }
 
+configure_sparse_checkout() {
+    mkdir -p "$DRCLAW_DIR/.git/info"
+    git -C "$DRCLAW_DIR" config core.sparseCheckout true
+    git -C "$DRCLAW_DIR" config core.sparseCheckoutCone false
+    cat > "$DRCLAW_DIR/.git/info/sparse-checkout" <<'EOF'
+/*
+!/assets/demos/
+!/assets/demos/**
+EOF
+}
+
 sync_repo() {
     if [ -d "$DRCLAW_DIR/.git" ]; then
         info "Updating $DRCLAW_DIR..."
+        configure_sparse_checkout
+        git -C "$DRCLAW_DIR" read-tree -mu HEAD
         git -C "$DRCLAW_DIR" pull --rebase --quiet
         success "Repository updated"
     else
@@ -159,7 +172,9 @@ sync_repo() {
             rm -rf "$DRCLAW_DIR"
         fi
         info "Cloning DrClaw into $DRCLAW_DIR..."
-        git clone --quiet "$REPO_URL" "$DRCLAW_DIR"
+        git clone --quiet --filter=blob:none --no-checkout "$REPO_URL" "$DRCLAW_DIR"
+        configure_sparse_checkout
+        git -C "$DRCLAW_DIR" checkout --quiet HEAD
         success "Repository cloned"
     fi
 }
