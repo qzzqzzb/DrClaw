@@ -128,11 +128,14 @@ InternClaw是什么？
 ### 比如，你可以直接让 agent 接入远程服务器运行实验，并在完成后回传结果：
 
 <p align="center">
-  <a href="assets/demos/exp_xiami_long.png">
-    <img src="assets/demos/exp_xiami_long.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 1" height="320" />
+  <a href="assets/demos/exp_xiami_hor.png">
+    <img src="assets/demos/exp_xiami_hor.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 1" height="260" />
   </a>
-  <a href="assets/demos/exp_ssh_long.png">
-    <img src="assets/demos/exp_ssh_long.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 2" height="320" style="margin-left: 8px;" />
+</p>
+
+<p align="center">
+  <a href="assets/demos/exp_ssh_hor.png">
+    <img src="assets/demos/exp_ssh_hor.png" alt="Agent 接入远程服务器运行实验并汇报结果示例 2" height="260" />
   </a>
 </p>
 
@@ -148,13 +151,10 @@ InternClaw是什么？
 
 <p align="center">
   <a href="assets/demo-internagent-ml-1.jpg">
-    <img src="assets/demo-internagent-ml-1.jpg" alt="自动迭代方案与实时进度追踪示例 1" height="420" />
+    <img src="assets/demo-internagent-ml-1.jpg" alt="自动迭代方案与实时进度追踪示例 1" height="320" />
   </a>
-</p>
-
-<p align="center">
   <a href="assets/demos/demo-intern-ml-res.jpg">
-    <img src="assets/demos/demo-intern-ml-res.jpg" alt="自动迭代方案与实时进度追踪示例 2" height="420" />
+    <img src="assets/demos/demo-intern-ml-res.jpg" alt="自动迭代方案与实时进度追踪示例 2" height="320" style="margin-left: 8px;" />
   </a>
 </p>
 
