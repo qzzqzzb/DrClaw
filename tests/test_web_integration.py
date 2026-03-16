@@ -226,6 +226,27 @@ async def test_chat_file_upload_and_download(kernel, adapter):
 
 
 @pytest.mark.asyncio
+async def test_chat_file_upload_accepts_docx(kernel, adapter):
+    app = _make_app(kernel, adapter)
+    async with TestClient(TestServer(app)) as client:
+        form = FormData()
+        form.add_field(
+            "files",
+            b"fake docx bytes",
+            filename="draft.docx",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+        upload = await client.post("/api/chat/files/upload", data=form)
+        assert upload.status == 201
+        body = await upload.json()
+        assert isinstance(body.get("files"), list)
+        assert len(body["files"]) == 1
+        uploaded = body["files"][0]
+        assert uploaded["name"] == "draft.docx"
+        assert uploaded["download_url"].startswith("/api/chat/files/")
+
+
+@pytest.mark.asyncio
 async def test_chat_file_upload_rejects_unsupported_extension(kernel, adapter):
     app = _make_app(kernel, adapter)
     async with TestClient(TestServer(app)) as client:

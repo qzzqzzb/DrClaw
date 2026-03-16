@@ -68,6 +68,7 @@ _CHAT_ALLOWED_EXTENSIONS = {
     ".html",
     ".css",
     ".pdf",
+    ".docx",
     ".png",
     ".jpg",
     ".jpeg",
@@ -1628,7 +1629,7 @@ async def handle_upload_chat_files(request: web.Request) -> web.Response:
                     "error": (
                         f"Unsupported file type for '{filename}'. "
                         "Allowed types: txt, md, json, yaml, yml, csv, py, js, ts, tsx, "
-                        "html, css, pdf, png, jpg, jpeg, gif, webp, svg, zip."
+                        "html, css, pdf, docx, png, jpg, jpeg, gif, webp, svg, zip."
                     )
                 },
                 status=400,
