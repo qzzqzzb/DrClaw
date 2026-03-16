@@ -85,10 +85,10 @@ InternClaw内置了10+个开箱即用的各式智能体，基于200+科研技能
 
 | 分类 | 智能体 |
 | :--- | :--- |
-| 通用科研 | 虾看论文，脑洞虾，虾跑实验 |
-| 学科专用 | 虾顿（物理），拉瓦虾（化学），高蛋白深海虾（蛋白组学），基因虾（基因组学），地科虾（地球科学），我不是药虾（药学）。。。。 |
-| 科研杂活 | 虾报告，虾写本子，虾做ppt，虾记录 |
-| 情感陪伴 | 虾摸，虾夸，虾猫 <img src="./assets/avatars/19.png" alt="虾猫" height="18" /> |
+| 通用科研 | 虾看论文 <img src="./assets/avatars/18.png" alt="虾看论文" height="36" />，脑洞虾，虾跑实验 <img src="./assets/avatars/3.png" alt="虾跑实验" height="36" /> |
+| 学科专用 | 虾顿 <img src="./assets/avatars/0.png" alt="虾顿" height="36" />（物理），拉瓦虾 <img src="./assets/avatars/1.png" alt="拉瓦虾" height="36" />（化学），高蛋白深海虾（蛋白组学），基因虾 <img src="./assets/avatars/4.png" alt="基因虾" height="36" />（基因组学），地科虾（地球科学），我不是药虾 <img src="./assets/avatars/5.png" alt="我不是药虾" height="36" />（药学）。。。。 |
+| 科研杂活 | 虾报告 <img src="./assets/avatars/6.png" alt="虾报告" height="36" />，虾写本子，虾做ppt，虾记录 |
+| 情感陪伴 | 虾摸，虾夸，虾猫 <img src="./assets/avatars/19.png" alt="虾猫" height="36" /> |
 
 
 
