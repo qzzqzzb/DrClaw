@@ -98,7 +98,14 @@ InternClaw是什么？
 
 ## 快速上手
 
-作为PI，你只需要对秘书说出你想做什么：
+### 你可以从智能体商店中一键导入预设智能体，迅速搭建自己的科研工作流：
+
+<p align="center">
+  <a href="https://youtu.be/aKUg_n3uw9k">
+    <img src="https://img.youtube.com/vi/aKUg_n3uw9k/hqdefault.jpg" alt="从智能体商店一键导入预设模版，迅速搭建科研工作流" height="384" />
+  </a>
+</p>
+
 
 <!--
 <table>
@@ -125,6 +132,10 @@ InternClaw是什么？
 </table>
 -->
 
+## 使用案例
+
+作为PI，你只需要对秘书说出你想做什么：
+
 ### 比如，你可以直接让 agent 接入远程服务器运行实验，并在完成后回传结果：
 
 <p align="center">
@@ -144,6 +155,17 @@ InternClaw是什么？
 <p align="center">
   <a href="assets/demos/demo-internagent-enso.gif">
     <img src="assets/demos/demo-internagent-enso.gif" alt="使用 InternAgent 平台完成 ENSO 模型比较并直接生成论文可用图片" height="420" />
+  </a>
+</p>
+
+### 基于已有成果进行基金申请书的写作
+
+<p align="center">
+  <a href="assets/demos/proposal_writing_agent.png">
+    <img src="assets/demos/proposal_writing_agent.png" alt="基于已有成果进行基金申请书写作示例 1" height="320" />
+  </a>
+  <a href="assets/demos/proposal_writing_res.png">
+    <img src="assets/demos/proposal_writing_res.png" alt="基于已有成果进行基金申请书写作示例 2" height="320" style="margin-left: 8px;" />
   </a>
 </p>
 
