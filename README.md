@@ -372,9 +372,8 @@ drclaw daemon -f web
 ### 各个模型厂商接口配置
 
 <details>
-<summary>展开查看 OpenRouter / Anthropic / GLM 配置示例</summary>
+<summary>OpenRouter</summary>
 
-**OpenRouter:**
 ```json
 {
   "provider": {
@@ -384,8 +383,11 @@ drclaw daemon -f web
   }
 }
 ```
+</details>
 
-**Anthropic:**
+<details>
+<summary>Anthropic</summary>
+
 ```json
 {
   "provider": {
@@ -394,8 +396,11 @@ drclaw daemon -f web
   }
 }
 ```
+</details>
 
-**GLM（智谱 OpenAI 兼容接口）:**
+<details>
+<summary>GLM（智谱 OpenAI 兼容接口）</summary>
+
 注意：通过 LiteLLM 接入时，`model` 需要带 provider 前缀，推荐写成 `openai/glm-5` 或 `openai/glm-4.7-flash`。
 
 ```json
