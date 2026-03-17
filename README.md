@@ -29,9 +29,9 @@
 
 微信群聊邀请二维码：
 
-<figure>
+<p align="center">
 <img src="assets/demos/wechat_group.png" alt="DrClaw 微信群聊邀请二维码" width="320" />
-</figure>
+</p>
 
 ## 开工大吉
 
