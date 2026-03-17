@@ -369,6 +369,11 @@ drclaw daemon -f web
 
 默认启动后访问 `http://127.0.0.1:8080` 即可打开 Web 控制台。安装脚本已经自动执行 `drclaw onboard`.
 
+### 各个模型厂商接口配置
+
+<details>
+<summary>展开查看 OpenRouter / Anthropic / GLM 配置示例</summary>
+
 **OpenRouter:**
 ```json
 {
@@ -389,6 +394,32 @@ drclaw daemon -f web
   }
 }
 ```
+
+**GLM（智谱 OpenAI 兼容接口）:**
+注意：通过 LiteLLM 接入时，`model` 需要带 provider 前缀，推荐写成 `openai/glm-5` 或 `openai/glm-4.7-flash`。
+
+```json
+{
+  "provider": {
+    "api_key": "YOUR_ZHIPU_API_KEY",
+    "api_base": "https://open.bigmodel.cn/api/paas/v4/",
+    "model": "openai/glm-5"
+  }
+}
+```
+
+如果你主要用于代码任务，也可以尝试智谱 coding 端点：
+
+```json
+{
+  "provider": {
+    "api_key": "YOUR_ZHIPU_API_KEY",
+    "api_base": "https://open.bigmodel.cn/api/coding/paas/v4",
+    "model": "openai/glm-5"
+  }
+}
+```
+</details>
 
 **Serper网页搜索:**
 ```json
