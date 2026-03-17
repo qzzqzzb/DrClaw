@@ -2,7 +2,9 @@
 
 from pathlib import Path
 
-from drclaw.config.loader import load_config, save_config
+import pytest
+
+from drclaw.config.loader import ConfigLoadError, load_config, load_config_strict, save_config
 from drclaw.config.schema import (
     AgentConfig,
     DaemonConfig,
@@ -161,6 +163,33 @@ def test_config_invalid_schema_returns_defaults(tmp_data_dir: Path):
     path.write_text('{"agent": {"max_iterations": "not_a_number"}}', encoding="utf-8")
     cfg = load_config(path)
     assert cfg == DrClawConfig()
+
+
+def test_load_config_strict_raises_for_corrupt_json(tmp_data_dir: Path):
+    path = tmp_data_dir / "bad.json"
+    path.write_text("{invalid json", encoding="utf-8")
+
+    with pytest.raises(ConfigLoadError, match="Invalid config JSON"):
+        load_config_strict(path)
+
+
+def test_load_config_strict_raises_for_invalid_schema(tmp_data_dir: Path):
+    path = tmp_data_dir / "bad_schema.json"
+    path.write_text('{"agent": {"max_iterations": "not_a_number"}}', encoding="utf-8")
+
+    with pytest.raises(ConfigLoadError, match="agent.max_iterations"):
+        load_config_strict(path)
+
+
+def test_load_config_strict_raises_for_missing_active_provider(tmp_data_dir: Path):
+    path = tmp_data_dir / "bad_provider.json"
+    path.write_text(
+        '{"providers": {"default": {"model": "openai/gpt-4o"}},"active_provider": "missing"}',
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ConfigLoadError, match="active_provider"):
+        load_config_strict(path)
 
 
 def test_daemon_config_default():

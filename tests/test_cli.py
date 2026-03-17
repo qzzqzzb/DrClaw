@@ -465,6 +465,23 @@ def test_cron_run_executes_job(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# daemon
+# ---------------------------------------------------------------------------
+
+
+def test_daemon_rejects_invalid_config_file(tmp_path: Path) -> None:
+    data_dir = tmp_path / "drclaw_data"
+    data_dir.mkdir()
+    (data_dir / "config.json").write_text("{invalid json", encoding="utf-8")
+
+    with patch("drclaw.cli.app.get_data_dir", return_value=data_dir):
+        result = runner.invoke(app, ["daemon"])
+
+    assert result.exit_code == 1
+    assert "Invalid config JSON" in result.output
+
+
+# ---------------------------------------------------------------------------
 # tray + launchd
 # ---------------------------------------------------------------------------
 
