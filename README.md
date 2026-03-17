@@ -27,6 +27,12 @@
 
 [**中文**](./README.md) | [**English**](./README_en.md)
 
+微信群聊邀请二维码：
+
+<figure>
+<img src="assets/demos/wechat_group.png" alt="DrClaw 微信群聊邀请二维码" width="320" />
+</figure>
+
 ## 开工大吉
 
 建造实验室
