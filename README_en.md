@@ -184,26 +184,32 @@ More [beta features](#Beta) here.
 
 ## Configuration
 
-After install, edit `~/.drclaw/config.json` to set your LLM provider. Any [litellm-compatible](https://docs.litellm.ai/docs/providers) model string works.
+After install, edit `~/.drclaw/config.json` to set your LLM provider. The current config format is `providers + active_provider`, and any [litellm-compatible](https://docs.litellm.ai/docs/providers) model string works.
 
 **OpenRouter:**
 ```json
 {
-  "provider": {
-    "api_key": "sk-or-v1-...",
-    "api_base": "https://openrouter.ai/api/v1",
-    "model": "openrouter/anthropic/claude-sonnet-4-5"
-  }
+  "providers": {
+    "default": {
+      "api_key": "sk-or-v1-...",
+      "api_base": "https://openrouter.ai/api/v1",
+      "model": "openrouter/anthropic/claude-sonnet-4-5"
+    }
+  },
+  "active_provider": "default"
 }
 ```
 
 **Anthropic direct:**
 ```json
 {
-  "provider": {
-    "api_key": "sk-ant-...",
-    "model": "anthropic/claude-sonnet-4-5"
-  }
+  "providers": {
+    "default": {
+      "api_key": "sk-ant-...",
+      "model": "anthropic/claude-sonnet-4-5"
+    }
+  },
+  "active_provider": "default"
 }
 ```
 
