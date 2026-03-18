@@ -79,6 +79,15 @@ PROVIDERS: tuple[ProviderSpec, ...] = (
         litellm_prefix="gemini",
         skip_prefixes=("gemini/",),
     ),
+    ProviderSpec(
+        name="moonshot",
+        keywords=("moonshot", "kimi"),
+        env_key="MOONSHOT_API_KEY",
+        display_name="Moonshot AI",
+        litellm_prefix="moonshot",
+        skip_prefixes=("moonshot/",),
+        default_api_base="https://api.moonshot.ai/v1",
+    ),
 )
 
 

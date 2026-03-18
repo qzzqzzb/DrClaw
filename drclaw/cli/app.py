@@ -20,7 +20,7 @@ from rich.console import Console
 from rich.table import Table
 
 from drclaw import __version__
-from drclaw.config.loader import load_config, save_config
+from drclaw.config.loader import ConfigLoadError, load_config, load_config_strict, save_config
 from drclaw.config.schema import DrClawConfig
 from drclaw.models.project import (
     AmbiguousProjectNameError,
@@ -323,10 +323,14 @@ def daemon(
     ),
 ) -> None:
     """Start DrClaw in daemon mode — boot kernel, load frontends, block until signal."""
-    from drclaw.daemon.server import Daemon
-
-    config = _load_config()
+    config_path = get_data_dir() / "config.json"
+    try:
+        config = load_config_strict(config_path)
+    except ConfigLoadError as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        raise typer.Exit(code=1) from None
     provider = _make_provider(config)
+    from drclaw.daemon.server import Daemon
 
     if debug_full:
         debug = True

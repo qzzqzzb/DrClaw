@@ -184,26 +184,60 @@ More [beta features](#Beta) here.
 
 ## Configuration
 
-After install, edit `~/.drclaw/config.json` to set your LLM provider. Any [litellm-compatible](https://docs.litellm.ai/docs/providers) model string works.
+After install, edit `~/.drclaw/config.json` to set your LLM provider. The current config format is `providers + active_provider`, and any [litellm-compatible](https://docs.litellm.ai/docs/providers) model string works.
 
 **OpenRouter:**
 ```json
 {
-  "provider": {
-    "api_key": "sk-or-v1-...",
-    "api_base": "https://openrouter.ai/api/v1",
-    "model": "openrouter/anthropic/claude-sonnet-4-5"
-  }
+  "providers": {
+    "default": {
+      "api_key": "sk-or-v1-...",
+      "api_base": "https://openrouter.ai/api/v1",
+      "model": "openrouter/anthropic/claude-sonnet-4-5"
+    }
+  },
+  "active_provider": "default"
 }
 ```
 
 **Anthropic direct:**
 ```json
 {
-  "provider": {
-    "api_key": "sk-ant-...",
-    "model": "anthropic/claude-sonnet-4-5"
-  }
+  "providers": {
+    "default": {
+      "api_key": "sk-ant-...",
+      "model": "anthropic/claude-sonnet-4-5"
+    }
+  },
+  "active_provider": "default"
+}
+```
+
+**Kimi / Moonshot:**
+```json
+{
+  "providers": {
+    "default": {
+      "api_key": "YOUR_MOONSHOT_API_KEY",
+      "model": "moonshot/kimi-k2.5"
+    }
+  },
+  "active_provider": "default"
+}
+```
+
+If you prefer the explicit OpenAI-compatible endpoint:
+
+```json
+{
+  "providers": {
+    "default": {
+      "api_key": "YOUR_MOONSHOT_API_KEY",
+      "api_base": "https://api.moonshot.ai/v1",
+      "model": "openai/kimi-k2.5"
+    }
+  },
+  "active_provider": "default"
 }
 ```
 
