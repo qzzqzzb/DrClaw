@@ -441,7 +441,7 @@ drclaw daemon -f web
 <details>
 <summary>Kimi / Moonshot</summary>
 
-推荐直接使用 LiteLLM 的 `moonshot/...` 前缀：
+直接使用 LiteLLM 的 `moonshot/...` 前缀：
 
 ```json
 {
@@ -455,7 +455,7 @@ drclaw daemon -f web
 }
 ```
 
-如果你更想显式走 OpenAI 兼容端点，也可以这样配：
+或使用 OpenAI 兼容端点：
 
 ```json
 {
