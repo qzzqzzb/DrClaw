@@ -73,3 +73,13 @@ def test_make_provider_routes_anthropic_to_litellm():
     )
     provider = _make_provider(config)
     assert isinstance(provider, LiteLLMProvider)
+
+
+def test_make_provider_routes_moonshot_to_litellm():
+    from drclaw.providers.litellm_provider import LiteLLMProvider
+
+    config = DrClawConfig(
+        providers={"default": ProviderConfig(model="moonshot/kimi-k2.5")}
+    )
+    provider = _make_provider(config)
+    assert isinstance(provider, LiteLLMProvider)
