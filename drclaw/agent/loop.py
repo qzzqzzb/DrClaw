@@ -179,7 +179,7 @@ class AgentLoop:
 
             if response.stop_reason == "error":
                 logger.error("LLM returned error stop_reason")
-                final_content = "An error occurred while processing your request."
+                final_content = response.content or "An error occurred while processing your request."
                 had_error = True
                 break
 

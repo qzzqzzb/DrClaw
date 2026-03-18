@@ -15,6 +15,7 @@ from drclaw.providers.base import LLMProvider, LLMResponse, ToolCallRequest
 
 DEFAULT_CODEX_URL = "https://chatgpt.com/backend-api/codex/responses"
 DEFAULT_ORIGINATOR = "drclaw"
+DEFAULT_CODEX_TIMEOUT_SECONDS = 180.0
 
 _AGENT_DEFAULTS = AgentConfig()
 
@@ -92,8 +93,9 @@ class OpenAICodexProvider(LLMProvider):
                 model=self._model,
             )
         except Exception as e:
+            logger.exception("Codex request failed for model {}", self._model)
             return LLMResponse(
-                content=f"Error calling Codex: {e}",
+                content=f"Error calling Codex ({type(e).__name__}): {_format_exception(e)}",
                 tool_calls=[],
                 stop_reason="error",
                 input_tokens=0,
@@ -126,7 +128,7 @@ async def _request_codex(
     body: dict[str, Any],
     verify: bool,
 ) -> tuple[str, list[ToolCallRequest], str]:
-    async with httpx.AsyncClient(timeout=60.0, verify=verify) as client:
+    async with httpx.AsyncClient(timeout=DEFAULT_CODEX_TIMEOUT_SECONDS, verify=verify) as client:
         async with client.stream("POST", url, headers=headers, json=body) as response:
             if response.status_code != 200:
                 text = await response.aread()
@@ -134,6 +136,13 @@ async def _request_codex(
                     _friendly_error(response.status_code, text.decode("utf-8", "ignore"))
                 )
             return await _consume_sse(response)
+
+
+def _format_exception(exc: Exception) -> str:
+    message = str(exc).strip()
+    if message:
+        return message
+    return repr(exc)
 
 
 def _convert_tools(tools: list[dict[str, Any]]) -> list[dict[str, Any]]:

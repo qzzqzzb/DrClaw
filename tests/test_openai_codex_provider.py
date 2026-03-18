@@ -6,14 +6,17 @@ import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 
 from drclaw.config.schema import ProviderConfig
 from drclaw.providers.openai_codex_provider import (
+    DEFAULT_CODEX_TIMEOUT_SECONDS,
     OpenAICodexProvider,
     _convert_messages,
     _convert_tools,
     _convert_user_message,
+    _format_exception,
     _friendly_error,
     _map_finish_reason,
     _split_tool_call_id,
@@ -205,6 +208,17 @@ class TestFriendlyError:
         assert "internal" in msg
 
 
+class TestFormatException:
+    def test_prefers_non_empty_str(self):
+        exc = RuntimeError("boom")
+        assert _format_exception(exc) == "boom"
+
+    def test_falls_back_to_repr_for_empty_str(self):
+        exc = httpx.ReadTimeout("")
+        formatted = _format_exception(exc)
+        assert "ReadTimeout" in formatted
+
+
 # ---------------------------------------------------------------------------
 # OpenAICodexProvider.complete — mocked SSE
 # ---------------------------------------------------------------------------
@@ -370,3 +384,31 @@ class TestCompleteError:
 
         assert resp.stop_reason == "error"
         assert "Error calling Codex" in (resp.content or "")
+        assert "RuntimeError" in (resp.content or "")
+
+    async def test_empty_exception_still_has_type_and_message(self):
+        config = ProviderConfig(model="openai-codex/gpt-5.1-codex")
+        provider = OpenAICodexProvider(config)
+
+        fake_token = MagicMock()
+        fake_token.account_id = "acct_123"
+        fake_token.access = "tok_abc"
+
+        with (
+            patch(
+                "drclaw.providers.openai_codex_provider._request_codex",
+                new=AsyncMock(side_effect=httpx.ReadTimeout("")),
+            ),
+            patch("oauth_cli_kit.get_token", return_value=fake_token),
+        ):
+            resp = await provider.complete(
+                messages=[{"role": "user", "content": "hi"}],
+            )
+
+        assert resp.stop_reason == "error"
+        assert resp.content is not None
+        assert "ReadTimeout" in resp.content
+        assert "Error calling Codex" in resp.content
+
+    def test_request_timeout_constant(self):
+        assert DEFAULT_CODEX_TIMEOUT_SECONDS == 180.0

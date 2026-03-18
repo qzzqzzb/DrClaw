@@ -791,6 +791,24 @@ async def test_error_stop_reason(make_loop, mock_provider: MockProvider) -> None
 
 
 @pytest.mark.asyncio
+async def test_error_stop_reason_prefers_provider_error_content(
+    make_loop, mock_provider: MockProvider,
+) -> None:
+    mock_provider.queue(
+        LLMResponse(
+            content="Error calling Codex (ReadTimeout): ReadTimeout('')",
+            tool_calls=[],
+            stop_reason="error",
+            input_tokens=0,
+            output_tokens=0,
+        )
+    )
+    loop = make_loop()
+    result = await loop.process_direct("cause error", "cli:test")
+    assert "ReadTimeout" in result
+
+
+@pytest.mark.asyncio
 async def test_dispatch_publishes_error_msg_type_on_error_stop_reason(
     make_loop, mock_provider: MockProvider
 ) -> None:
