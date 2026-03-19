@@ -10,6 +10,7 @@ import pytest
 from drclaw.agent.context import ContextBuilder
 from drclaw.agent.memory import MemoryStore
 from drclaw.agent.skills import SkillsLoader
+from drclaw.providers.base import ASSISTANT_PROVIDER_FIELDS_KEY
 
 IDENTITY = "You are DrClaw, a research project manager."
 
@@ -174,6 +175,17 @@ def test_add_assistant_message_with_tool_calls(builder: ContextBuilder) -> None:
     msgs: list[dict[str, Any]] = []
     builder.add_assistant_message(msgs, None, tool_calls=tool_calls)
     assert msgs[0]["tool_calls"] == tool_calls
+
+
+def test_add_assistant_message_with_provider_metadata(builder: ContextBuilder) -> None:
+    msgs: list[dict[str, Any]] = []
+    builder.add_assistant_message(
+        msgs,
+        None,
+        tool_calls=[],
+        assistant_metadata={"reasoning_content": "step by step"},
+    )
+    assert msgs[0][ASSISTANT_PROVIDER_FIELDS_KEY] == {"reasoning_content": "step by step"}
 
 
 # ---------------------------------------------------------------------------

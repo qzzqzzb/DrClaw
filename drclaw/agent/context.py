@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from drclaw.providers.base import ASSISTANT_PROVIDER_FIELDS_KEY
+
 if TYPE_CHECKING:
     from drclaw.agent.memory import MemoryStore
     from drclaw.agent.skills import SkillsLoader
@@ -230,11 +232,14 @@ class ContextBuilder:
         messages: list[dict[str, Any]],
         content: str | None,
         tool_calls: list[dict[str, Any]] | None = None,
+        assistant_metadata: dict[str, Any] | None = None,
     ) -> None:
         """Add an assistant message to the message list."""
         msg: dict[str, Any] = {"role": "assistant", "content": content}
         if tool_calls:
             msg["tool_calls"] = tool_calls
+        if assistant_metadata:
+            msg[ASSISTANT_PROVIDER_FIELDS_KEY] = dict(assistant_metadata)
         messages.append(msg)
 
     def add_tool_result(

@@ -14,7 +14,7 @@ from drclaw.agent.loop import MAX_HOPS, AgentLoop
 from drclaw.agent.memory import MemoryStore
 from drclaw.bus.queue import MessageBus
 from drclaw.models.messages import InboundMessage, OutboundMessage
-from drclaw.providers.base import LLMResponse, ToolCallRequest
+from drclaw.providers.base import ASSISTANT_PROVIDER_FIELDS_KEY, LLMResponse, ToolCallRequest
 from drclaw.session.manager import SessionManager
 from drclaw.tools.background_tasks import BackgroundToolTaskManager
 from drclaw.tools.base import Tool
@@ -198,6 +198,65 @@ async def test_history_source_not_forwarded_to_provider(
     assert "source" not in history_user
     assert history_user.get("role") == "user"
     assert history_user.get("content") == "[Message Source: proj:delegated]\nold"
+
+
+@pytest.mark.asyncio
+async def test_history_preserves_internal_assistant_provider_fields(
+    make_loop, mock_provider: MockProvider,
+) -> None:
+    loop = make_loop()
+    session = loop.session_manager.load("cli:test")
+    session.messages = [
+        {"role": "user", "content": "old question", "source": "user"},
+        {
+            "role": "assistant",
+            "content": None,
+            "tool_calls": [
+                {
+                    "id": "tc1",
+                    "type": "function",
+                    "function": {"name": "search", "arguments": "{\"query\":\"drclaw\"}"},
+                }
+            ],
+            ASSISTANT_PROVIDER_FIELDS_KEY: {"reasoning_content": "step by step"},
+            "source": "main",
+        }
+    ]
+    loop.session_manager.save(session)
+
+    mock_provider.queue(make_text_response("ok"))
+    _ = await loop.process_direct("next", "cli:test")
+
+    first_call_messages = mock_provider.calls[0]["messages"]
+    history_assistant = next(m for m in first_call_messages if m.get("role") == "assistant")
+    assert history_assistant[ASSISTANT_PROVIDER_FIELDS_KEY] == {
+        "reasoning_content": "step by step"
+    }
+
+
+@pytest.mark.asyncio
+async def test_process_direct_persists_assistant_provider_metadata(
+    make_loop, mock_provider: MockProvider,
+) -> None:
+    mock_provider.queue(
+        LLMResponse(
+            content=None,
+            tool_calls=[ToolCallRequest(id="tc1", name="echo", arguments={"text": "ping"})],
+            stop_reason="tool_use",
+            input_tokens=1,
+            output_tokens=1,
+            assistant_metadata={"reasoning_content": "step by step"},
+        ),
+        make_text_response("done"),
+    )
+    registry = ToolRegistry()
+    registry.register(_EchoTool())
+    loop = make_loop(registry=registry)
+
+    _ = await loop.process_direct("echo ping", "cli:test")
+    session = loop.session_manager.load("cli:test")
+    assistant_msg = next(m for m in session.messages if m.get("role") == "assistant")
+    assert assistant_msg[ASSISTANT_PROVIDER_FIELDS_KEY] == {"reasoning_content": "step by step"}
 
 
 @pytest.mark.asyncio

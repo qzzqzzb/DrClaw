@@ -6,6 +6,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any
 
+ASSISTANT_PROVIDER_FIELDS_KEY = "_provider_fields"
+
 
 @dataclass
 class ToolCallRequest:
@@ -25,6 +27,7 @@ class LLMResponse:
     stop_reason: str  # "end_turn" | "tool_use" | "max_tokens" | "error" | "unknown"
     input_tokens: int
     output_tokens: int
+    assistant_metadata: dict[str, Any] | None = None
     model: str | None = None
     input_cost_usd: float = 0.0
     output_cost_usd: float = 0.0

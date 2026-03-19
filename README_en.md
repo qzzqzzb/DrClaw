@@ -219,6 +219,7 @@ After install, edit `~/.drclaw/config.json` to set your LLM provider. The curren
   "providers": {
     "default": {
       "api_key": "YOUR_MOONSHOT_API_KEY",
+      "api_base": "https://api.moonshot.cn/v1",
       "model": "moonshot/kimi-k2.5"
     }
   },
@@ -233,7 +234,7 @@ If you prefer the explicit OpenAI-compatible endpoint:
   "providers": {
     "default": {
       "api_key": "YOUR_MOONSHOT_API_KEY",
-      "api_base": "https://api.moonshot.ai/v1",
+      "api_base": "https://api.moonshot.cn/v1",
       "model": "openai/kimi-k2.5"
     }
   },

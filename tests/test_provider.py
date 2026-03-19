@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from drclaw.config.schema import ProviderConfig
-from drclaw.providers.base import LLMProvider, LLMResponse
+from drclaw.providers.base import ASSISTANT_PROVIDER_FIELDS_KEY, LLMProvider, LLMResponse
 from drclaw.providers.litellm_provider import LiteLLMProvider
 from tests.mocks import MockProvider
 
@@ -73,6 +73,7 @@ async def test_mock_provider_records_calls(mock_provider: MockProvider) -> None:
 def _make_litellm_response(
     content: str | None = None,
     tool_calls: list[Any] | None = None,
+    reasoning_content: str | None = None,
     finish_reason: str = "stop",
     prompt_tokens: int = 10,
     completion_tokens: int = 5,
@@ -83,7 +84,11 @@ def _make_litellm_response(
         func = SimpleNamespace(name=tc["name"], arguments=json.dumps(tc["arguments"]))
         tc_objs.append(SimpleNamespace(id=tc["id"], function=func))
 
-    message = SimpleNamespace(content=content, tool_calls=tc_objs or None)
+    message = SimpleNamespace(
+        content=content,
+        tool_calls=tc_objs or None,
+        reasoning_content=reasoning_content,
+    )
     choice = SimpleNamespace(message=message, finish_reason=finish_reason)
     usage = SimpleNamespace(prompt_tokens=prompt_tokens, completion_tokens=completion_tokens)
     return SimpleNamespace(choices=[choice], usage=usage)
@@ -199,6 +204,70 @@ async def test_litellm_provider_parses_tool_calls() -> None:
     assert tc.id == "tc1"
     assert tc.name == "search"
     assert tc.arguments == {"query": "drclaw"}
+
+
+async def test_litellm_provider_parses_reasoning_content_metadata() -> None:
+    provider = LiteLLMProvider(ProviderConfig(model="moonshot/kimi-k2.5"))
+    raw = _make_litellm_response(
+        finish_reason="tool_calls",
+        reasoning_content="hidden chain",
+        tool_calls=[{"id": "tc1", "name": "search", "arguments": {"query": "drclaw"}}],
+    )
+
+    with patch("litellm.acompletion", new=AsyncMock(return_value=raw)):
+        resp = await provider.complete([{"role": "user", "content": "search"}])
+
+    assert resp.assistant_metadata == {"reasoning_content": "hidden chain"}
+
+
+async def test_litellm_provider_restores_reasoning_content_for_moonshot_requests() -> None:
+    provider = LiteLLMProvider(ProviderConfig(model="moonshot/kimi-k2.5"))
+    raw = _make_litellm_response(content="done", finish_reason="stop")
+
+    with patch("litellm.acompletion", new=AsyncMock(return_value=raw)) as mock_completion:
+        await provider.complete([
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "tc1",
+                        "type": "function",
+                        "function": {"name": "search", "arguments": "{\"query\":\"drclaw\"}"},
+                    }
+                ],
+                ASSISTANT_PROVIDER_FIELDS_KEY: {"reasoning_content": "step by step"},
+            }
+        ])
+
+    sent_messages = mock_completion.await_args.kwargs["messages"]
+    assert sent_messages[0]["reasoning_content"] == "step by step"
+    assert ASSISTANT_PROVIDER_FIELDS_KEY not in sent_messages[0]
+
+
+async def test_litellm_provider_does_not_restore_reasoning_content_for_other_models() -> None:
+    provider = LiteLLMProvider(ProviderConfig(model="openai/gpt-4o"))
+    raw = _make_litellm_response(content="done", finish_reason="stop")
+
+    with patch("litellm.acompletion", new=AsyncMock(return_value=raw)) as mock_completion:
+        await provider.complete([
+            {
+                "role": "assistant",
+                "content": None,
+                "tool_calls": [
+                    {
+                        "id": "tc1",
+                        "type": "function",
+                        "function": {"name": "search", "arguments": "{\"query\":\"drclaw\"}"},
+                    }
+                ],
+                ASSISTANT_PROVIDER_FIELDS_KEY: {"reasoning_content": "step by step"},
+            }
+        ])
+
+    sent_messages = mock_completion.await_args.kwargs["messages"]
+    assert "reasoning_content" not in sent_messages[0]
+    assert ASSISTANT_PROVIDER_FIELDS_KEY not in sent_messages[0]
 
 
 async def test_litellm_provider_maps_finish_reasons() -> None:

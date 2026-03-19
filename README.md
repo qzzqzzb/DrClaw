@@ -441,13 +441,14 @@ drclaw daemon -f web
 <details>
 <summary>Kimi / Moonshot</summary>
 
-推荐直接使用 LiteLLM 的 `moonshot/...` 前缀：
+推荐直接使用 Moonshot 配置：
 
 ```json
 {
   "providers": {
     "default": {
       "api_key": "YOUR_MOONSHOT_API_KEY",
+      "api_base": "https://api.moonshot.cn/v1",
       "model": "moonshot/kimi-k2.5"
     }
   },
@@ -462,7 +463,7 @@ drclaw daemon -f web
   "providers": {
     "default": {
       "api_key": "YOUR_MOONSHOT_API_KEY",
-      "api_base": "https://api.moonshot.ai/v1",
+      "api_base": "https://api.moonshot.cn/v1",
       "model": "openai/kimi-k2.5"
     }
   },
