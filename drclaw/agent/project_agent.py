@@ -64,7 +64,57 @@ if TYPE_CHECKING:
     from drclaw.external_agents.bridge import ExternalAgentBridge
 
 
-def _build_identity(project: Project, workspace_dir: Path) -> str:
+def _build_acpx_guidance(
+    config: DrClawConfig,
+    workspace_dir: Path,
+    *,
+    project_id: str,
+) -> str:
+    if not config.acpx.enabled:
+        return ""
+
+    exec_tool = "long_exec" if config.acpx.prefer_long_exec else "exec"
+    fallback_tool = "exec" if exec_tool == "long_exec" else "long_exec"
+    cmd = config.acpx.command.strip() or "acpx"
+    agent = config.acpx.default_agent.strip() or "codex"
+    session_prefix = f"drclaw-proj-{project_id}-"
+
+    return "\n\n".join(
+        [
+            "## ACPX Access",
+            "ACPX access is enabled on this host. There is no dedicated ACPX tool in DrClaw.",
+            (
+                f"Use the existing `{exec_tool}` tool by default to run standard "
+                f"`{cmd}` CLI commands. Use `{fallback_tool}` only when appropriate."
+            ),
+            f"Default binary: `{cmd}`",
+            f"Default ACPX agent: `{agent}`",
+            f"Default working directory: `{workspace_dir}`",
+            f"Required session prefix for sessions you create: `{session_prefix}`",
+            "Recommended command patterns:",
+            f"- One-shot task: `{cmd} {agent} exec '<instruction>'`",
+            (
+                f"- Ensure session: `{cmd} {agent} sessions ensure --name "
+                f"{session_prefix}<task-suffix>`"
+            ),
+            (
+                f"- Reuse session: `{cmd} {agent} -s {session_prefix}<task-suffix> "
+                f"'<instruction>'`"
+            ),
+            f"- Status: `{cmd} {agent} -s {session_prefix}<task-suffix> status`",
+            f"- Cancel: `{cmd} {agent} -s {session_prefix}<task-suffix> cancel`",
+            f"- Close: `{cmd} {agent} sessions close {session_prefix}<task-suffix>`",
+            (
+                f"Every persistent ACPX session you create for this project must start with "
+                f"`{session_prefix}`."
+            ),
+            "Reuse stable session names for ongoing tasks and do not create duplicate sessions.",
+            "If the global `acpx` skill is available, read it before starting a non-trivial Codex workflow.",
+        ]
+    )
+
+
+def _build_identity(project: Project, workspace_dir: Path, config: DrClawConfig) -> str:
     soul = load_project_soul(workspace_dir)
     lines = [
         soul,
@@ -77,6 +127,9 @@ def _build_identity(project: Project, workspace_dir: Path) -> str:
         lines.append(f"Goals: {project.goals}")
     if project.tags:
         lines.append(f"Tags: {', '.join(project.tags)}")
+    acpx = _build_acpx_guidance(config, workspace_dir, project_id=project.id)
+    if acpx:
+        lines.append(acpx)
     return "\n\n".join(lines)
 
 
@@ -141,7 +194,7 @@ class ProjectAgent:
             env_provider=env_provider,
         )
         context_builder = ContextBuilder(
-            lambda: _build_identity(project, workspace_dir),
+            lambda: _build_identity(project, workspace_dir, config),
             self.memory_store,
             skills_loader=skills_loader,
             project_notes_file=project_dir / "PROJECT.md",

@@ -33,6 +33,7 @@ def test_onboard_fresh(tmp_path: Path) -> None:
     assert "Initialized" in result.output
     assert (data_dir / "config.json").exists()
     assert (data_dir / "skills").is_dir()
+    assert (data_dir / "skills" / "acpx" / "SKILL.md").is_file()
     assert (data_dir / "assets").is_dir()
     assert (data_dir / "local-skill-hub").is_dir()
     assert (data_dir / "agent-hub").is_dir()

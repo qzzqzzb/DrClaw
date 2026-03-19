@@ -8,9 +8,10 @@ import pytest
 
 from drclaw.agent.project_agent import ProjectAgent
 from drclaw.agent.skills import SkillsLoader
-from drclaw.config.schema import DrClawConfig
+from drclaw.config.schema import AcpxConfig, DrClawConfig
 from drclaw.models.project import Project
 from drclaw.soul import project_soul_path
+from drclaw.utils.helpers import ensure_default_skill_dirs
 from tests.mocks import MockProvider, make_project, make_text_response, make_tool_response
 
 
@@ -271,6 +272,35 @@ async def test_project_agent_always_skill_in_prompt(
     assert "Active Skills" in system_msg
     assert "test-skill" in system_msg
     assert "This is injected content" in system_msg
+
+
+def test_project_agent_prompt_excludes_acpx_guidance_by_default(
+    tmp_path: Path, mock_provider: MockProvider, project: Project
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    agent = ProjectAgent(config, mock_provider, project)
+    prompt = agent.loop.context_builder.build_system_prompt()
+    assert "## ACPX Access" not in prompt
+    assert "acpx codex exec" not in prompt
+
+
+def test_project_agent_prompt_includes_acpx_guidance_when_enabled(
+    tmp_path: Path, mock_provider: MockProvider, project: Project
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    config.acpx = AcpxConfig(enabled=True, command="acpx", default_agent="codex")
+    ensure_default_skill_dirs(config.data_path)
+
+    agent = ProjectAgent(config, mock_provider, project)
+    prompt = agent.loop.context_builder.build_system_prompt()
+
+    assert "## ACPX Access" in prompt
+    assert "There is no dedicated ACPX tool in DrClaw." in prompt
+    assert "Use the existing `long_exec` tool by default" in prompt
+    assert "`acpx codex exec '<instruction>'`" in prompt
+    assert f"`drclaw-proj-{project.id}-`" in prompt
+    assert f"`acpx codex sessions ensure --name drclaw-proj-{project.id}-<task-suffix>`" in prompt
+    assert "<name>acpx</name>" in prompt
 
 
 @pytest.mark.asyncio

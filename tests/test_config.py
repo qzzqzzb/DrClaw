@@ -6,6 +6,7 @@ import pytest
 
 from drclaw.config.loader import ConfigLoadError, load_config, load_config_strict, save_config
 from drclaw.config.schema import (
+    AcpxConfig,
     AgentConfig,
     DaemonConfig,
     DrClawConfig,
@@ -45,6 +46,7 @@ def test_config_defaults():
     assert cfg.tools.web.serper.endpoint == "https://google.serper.dev/search"
     assert cfg.tools.web.serper.max_results == 5
     assert cfg.claude_code.enabled is False
+    assert cfg.acpx == AcpxConfig()
     assert cfg.env.global_ == {}
     assert cfg.env.scoped == {}
     assert cfg.external_agents == []
@@ -66,6 +68,7 @@ def test_config_save_load_roundtrip(tmp_data_dir: Path):
             temperature=0.5,
             tool_detach_timeout_seconds=30,
         ),
+        acpx=AcpxConfig(enabled=True, command="acpx", default_agent="codex"),
         data_dir="/tmp/drclaw",
     )
     save_config(cfg, path)
@@ -75,6 +78,9 @@ def test_config_save_load_roundtrip(tmp_data_dir: Path):
     assert loaded.agent.max_iterations == 20
     assert loaded.agent.temperature == 0.5
     assert loaded.agent.tool_detach_timeout_seconds == 30
+    assert loaded.acpx.enabled is True
+    assert loaded.acpx.command == "acpx"
+    assert loaded.acpx.default_agent == "codex"
     assert loaded.data_dir == "/tmp/drclaw"
 
 
