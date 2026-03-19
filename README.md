@@ -512,6 +512,17 @@ docker run -p 127.0.0.1:8080:8080 ...
 
 一系列测试中功能正在逐步完善。这些功能未经过充分测试，请谨慎使用。
 
+### 单 Project 多 Agent
+
+单个 project 现在支持一个 `project manager` 加多个 `student agent` 的层级结构。
+
+- `proj:<project_id>` 是项目对外唯一的 manager agent，负责接收 `main agent` 的项目级任务
+- `student:<project_id>:<student_id>` 是项目内部 student agent，当前主要由 project manager 调度，不接受 `main agent` 直接下发任务
+- 同一 project 下的 students 共享 `projects/<project_id>/workspace`
+- manager 和每个 student 都有独立的 `MEMORY.md`、`HISTORY.md`、session history 和 SOUL / 配置目录
+- `/api/agents` 和 daemon 运行时已经能区分 `project_manager` 与 `project_student`
+- daemon 在 `--debug` / `--debug-full` 下会输出 student agent 的执行摘要，并在 debug jsonl 中记录 `agent_id`
+
 ### Docker Sandbox Job
 
 Student agent 现在可以通过 `create_job` 启动一个 Docker sandbox job 来执行高风险 shell 任务。

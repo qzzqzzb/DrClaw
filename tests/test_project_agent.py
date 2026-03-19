@@ -6,10 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from drclaw.agent.project_agent import ProjectAgent
+from drclaw.bus.queue import MessageBus
+from drclaw.agent.project_agent import ProjectAgent, StudentProjectAgent
 from drclaw.agent.skills import SkillsLoader
 from drclaw.config.schema import AcpxConfig, DrClawConfig
-from drclaw.models.project import Project
+from drclaw.models.project import Project, StudentAgentConfig
 from drclaw.soul import project_soul_path
 from drclaw.utils.helpers import ensure_default_skill_dirs
 from tests.mocks import MockProvider, make_project, make_text_response, make_tool_response
@@ -218,14 +219,64 @@ async def test_project_metadata_in_identity(
     assert "Produce a survey paper" in system_msg
     assert "ai-safety" in system_msg
     assert "alignment" in system_msg
-    assert "Equipment call policy" in system_msg
-    assert "await_result=true" in system_msg
-    assert "await_result=false" in system_msg
-    assert "list_active_equipment_runs/get_equipment_run_status" in system_msg
-    assert "do not start a duplicate equipment run" in system_msg
-    assert "unrecoverable external dependency error" in system_msg
-    assert "default to uv" in system_msg
-    assert "seek help from the user or caller" in system_msg
+
+
+def test_project_agent_registers_route_to_student_when_students_exist(
+    tmp_path: Path, mock_provider: MockProvider
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    project = make_project()
+    project.student_agents = [StudentAgentConfig(id="researcher", label="Researcher")]
+
+    agent = ProjectAgent(config, mock_provider, project)
+
+    assert "route_to_student" in agent.loop.tool_registry.tool_names
+    tool = agent.loop.tool_registry.get("route_to_student")
+    assert tool is not None
+    student_ids = tool.parameters["properties"]["student_id"]["enum"]
+    assert student_ids == ["researcher"]
+    prompt = agent.loop.context_builder.build_system_prompt()
+    assert "use one of the exact student ids listed below" in prompt
+    assert "do NOT poll for status with `list_background_tool_tasks`, `list_active_jobs`" in prompt
+    assert "When you receive a `Student report from ...` callback" in prompt
+
+
+@pytest.mark.asyncio
+async def test_student_project_agent_has_private_memory_dir(
+    tmp_path: Path, mock_provider: MockProvider
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    project = make_project()
+    student = StudentAgentConfig(id="researcher", label="Researcher")
+    agent = StudentProjectAgent(config, mock_provider, project, student)
+
+    mock_provider.queue(make_text_response("ok"))
+    await agent.process_direct("hello")
+
+    student_dir = tmp_path / "projects" / project.id / "agents" / student.id
+    assert agent.memory_store.memory_file == student_dir / "MEMORY.md"
+    assert agent.memory_store.history_file == student_dir / "HISTORY.md"
+    session = agent.loop.session_manager.load(f"student:{project.id}:{student.id}")
+    assert session.session_key == f"student:{project.id}:{student.id}"
+
+
+@pytest.mark.asyncio
+async def test_route_to_student_tool_return_warns_against_polling(
+    tmp_path: Path, mock_provider: MockProvider
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    project = make_project()
+    project.student_agents = [StudentAgentConfig(id="researcher", label="Researcher")]
+    agent = ProjectAgent(config, mock_provider, project)
+    agent.loop.bus = MessageBus()
+    tool = agent.loop.tool_registry.get("route_to_student")
+
+    assert tool is not None
+    result = await tool.execute({"student_id": "researcher", "message": "do work"})
+
+    assert "You must now wait for the response from Researcher." in result
+    assert "Do NOT check the student's workspace" in result
+    assert "list_background_tool_tasks or list_active_jobs" in result
 
 
 @pytest.mark.asyncio

@@ -16,8 +16,10 @@ export function ChatInput({ onSend }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const lastCompositionEndRef = useRef(0)
   const activeAgentId = useChatStore((s) => s.activeAgentId)
+  const activeAgent = useChatStore((s) => s.agents.find((agent) => agent.id === s.activeAgentId) ?? null)
   const connectionStatus = useChatStore((s) => s.connectionStatus)
-  const disabled = connectionStatus !== "connected" || !activeAgentId
+  const chatEnabled = activeAgent?.chat_enabled !== false
+  const disabled = connectionStatus !== "connected" || !activeAgentId || !chatEnabled
 
   textRef.current = text
 
@@ -74,7 +76,15 @@ export function ChatInput({ onSend }: Props) {
         value={text}
         onChange={(e) => setText(e.target.value)}
         disabled={disabled}
-        placeholder={disabled ? "Connecting..." : "Type a message..."}
+        placeholder={
+          connectionStatus !== "connected"
+            ? "Connecting..."
+            : !activeAgentId
+              ? "Select an agent..."
+              : !chatEnabled
+                ? "This agent is view-only. Send work to the project manager."
+                : "Type a message..."
+        }
         className="flex-1 rounded-lg border border-[#e0e0e0] px-3 py-2 text-sm text-zinc-900 outline-none focus:border-[#89b4fa] disabled:opacity-50"
       />
       <button

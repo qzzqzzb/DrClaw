@@ -11,7 +11,10 @@ function makeAgent(id: string, label: string, type: Agent["type"] = "assistant")
 describe("Sidebar", () => {
   beforeEach(() => {
     useChatStore.setState({
-      agents: [makeAgent("main", "Assistant Agent", "assistant"), makeAgent("p1", "Student 1", "student")],
+      agents: [
+        makeAgent("main", "Assistant Agent", "assistant"),
+        makeAgent("p1", "Student 1", "project_manager"),
+      ],
       activeAgentId: null,
       messages: {},
       connectionStatus: "connected",

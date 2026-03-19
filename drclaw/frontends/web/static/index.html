@@ -3575,10 +3575,15 @@ body {
     ) {
       return withAssetCacheBust("/assets/avatars/8.png");
     }
-    if (agent.type === "student") return withAssetCacheBust("/assets/avatars/17.png");
+    if (agent.type === "project_manager") return withAssetCacheBust("/assets/avatars/17.png");
+    if (agent.type === "project_student") return withAssetCacheBust("/assets/avatars/19.png");
     if (agent.type === "equipment") return withAssetCacheBust("/assets/avatar_3.jpg");
     if (agent.type === "external") return withAssetCacheBust("/assets/avatars/1.png");
     return withAssetCacheBust("/assets/DrClaw.png");
+  }
+
+  function agentChatEnabled(agent) {
+    return !agent || agent.chat_enabled !== false;
   }
 
   function renderAgentsPage() {
@@ -3606,7 +3611,7 @@ body {
       card.dataset.id = model.id;
       const avatarSrc = sourceAgent ? avatarForAgent(sourceAgent) : avatarForAgent(model);
       const avatarFallback = (
-        sourceAgent && sourceAgent.type === "student"
+        sourceAgent && sourceAgent.type === "project_student"
           ? withAssetCacheBust("/assets/avatars/17.png")
           : sourceAgent && sourceAgent.avatar
           ? withAssetCacheBust("/assets/avatar_2.jpg")
@@ -3893,10 +3898,17 @@ body {
   }
 
   function pickActiveAgent(preferredId) {
-    if (preferredId && getAgentById(preferredId)) return preferredId;
-    if (activeAgent && getAgentById(activeAgent)) return activeAgent;
+    if (preferredId) {
+      const preferred = getAgentById(preferredId);
+      if (preferred && agentChatEnabled(preferred)) return preferredId;
+    }
+    if (activeAgent) {
+      const current = getAgentById(activeAgent);
+      if (current && agentChatEnabled(current)) return activeAgent;
+    }
     if (getAgentById("main")) return "main";
-    return agents.length ? agents[0].id : null;
+    const firstChatEnabled = agents.find(agentChatEnabled);
+    return firstChatEnabled ? firstChatEnabled.id : (agents.length ? agents[0].id : null);
   }
 
   function updateChatHeader() {
@@ -3910,8 +3922,10 @@ body {
     const avatarSrc = agent ? avatarForAgent(agent) : withAssetCacheBust("/assets/DrClaw.png");
     const avatarFallback = agent
       ? (
-        agent.type === "student"
+        agent.type === "project_manager"
           ? withAssetCacheBust("/assets/avatars/17.png")
+          : agent.type === "project_student"
+          ? withAssetCacheBust("/assets/avatars/19.png")
           : agent.type === "equipment"
           ? withAssetCacheBust("/assets/avatar_3.jpg")
           : agent.type === "external"
@@ -4363,10 +4377,19 @@ body {
     chatEmpty.style.display = "none";
     messagesEl.style.display = "flex";
     inputBar.style.display = "flex";
-    msgInput.disabled = false;
-    sendBtn.disabled = false;
-    if (chatFileBtn) chatFileBtn.disabled = false;
     renderPendingFiles();
+    updateChatInputState();
+  }
+
+  function updateChatInputState() {
+    const agent = activeAgent ? getAgentById(activeAgent) : null;
+    const enabled = agentChatEnabled(agent);
+    msgInput.disabled = !enabled;
+    sendBtn.disabled = !enabled;
+    if (chatFileBtn) chatFileBtn.disabled = !enabled;
+    msgInput.placeholder = enabled
+      ? "Send a message..."
+      : "This student agent is view-only. Send work to the project manager.";
   }
 
   function openChat(agentId) {
@@ -4480,6 +4503,8 @@ body {
 
   async function send() {
     if (!activeAgent) return;
+    const agent = getAgentById(activeAgent);
+    if (!agentChatEnabled(agent)) return;
     const text = msgInput.value.trim();
     const pendingFiles = getPendingFiles(activeAgent).slice();
     if (!text && !pendingFiles.length) return;
@@ -4517,6 +4542,10 @@ body {
       setPending(agentId, true);
       if (!getAgentById(agentId)) {
         await fetchAgents();
+      }
+      const agent = getAgentById(agentId);
+      if (!agentChatEnabled(agent)) {
+        throw new Error("This student agent is view-only. Send work to the project manager.");
       }
       await ensureAgentActive(agentId);
 

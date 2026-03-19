@@ -1,8 +1,9 @@
 export interface Agent {
   id: string
   label: string
-  type: "assistant" | "student" | "equipment" | "external"
+  type: "assistant" | "project_manager" | "project_student" | "equipment" | "external"
   status: "idle" | "working" | "error"
+  chat_enabled?: boolean
 }
 
 export interface ChatMessage {

@@ -2,7 +2,8 @@ import type { Agent } from "../lib/types"
 
 const typeBadge: Record<Agent["type"], string> = {
   assistant: "bg-[#89b4fa] text-[#1e1e2e]",
-  student: "bg-[#a6e3a1] text-[#1e1e2e]",
+  project_manager: "bg-[#a6e3a1] text-[#1e1e2e]",
+  project_student: "bg-[#94e2d5] text-[#1e1e2e]",
   equipment: "bg-[#f9e2af] text-[#1e1e2e]",
   external: "bg-[#d1d5db] text-[#1e1e2e]",
 }
@@ -20,12 +21,13 @@ interface Props {
 }
 
 export function AgentItem({ agent, active, onClick }: Props) {
+  const disabled = agent.chat_enabled === false
   return (
     <button
       onClick={onClick}
       className={`flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm transition-colors ${
         active ? "bg-[#45475a]" : "hover:bg-[#313244]"
-      }`}
+      } ${disabled ? "opacity-70" : ""}`}
     >
       <span className={`h-2 w-2 shrink-0 rounded-full ${statusDot[agent.status]}`} />
       <span className="flex-1 truncate">{agent.label}</span>
