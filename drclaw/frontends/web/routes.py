@@ -706,7 +706,8 @@ def _agent_payload_for_handle(
     locale: str = DEFAULT_WEB_LOCALE,
     display_name: str | None = None,
     avatar: str | None = None,
-) -> dict[str, str | None]:
+) -> dict[str, str | bool | None]:
+    project = getattr(handle, "project", None)
     role_type = {
         "main": "assistant",
         "project_manager": "project_manager",
@@ -738,6 +739,7 @@ def _agent_payload_for_handle(
         "status": status,
         "avatar": avatar,
         "chat_enabled": chat_enabled,
+        "project_id": project.id if project is not None else None,
     }
 
 
@@ -760,6 +762,7 @@ def _idle_project_payload(
         "hub_template": project.hub_template,
         "avatar": avatar,
         "chat_enabled": True,
+        "project_id": project.id,
     }
 
 
@@ -780,6 +783,7 @@ def _idle_student_payload(
         "status": "idle",
         "avatar": None,
         "chat_enabled": False,
+        "project_id": project.id,
     }
 
 

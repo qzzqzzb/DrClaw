@@ -42,7 +42,7 @@ from drclaw.frontends.web.routes import (
     handle_upload_skill,
     handle_ws,
 )
-from drclaw.models.project import Project
+from drclaw.models.project import Project, StudentAgentConfig
 from drclaw.session.manager import SessionManager
 
 
@@ -280,6 +280,7 @@ async def test_agents_endpoint(kernel, adapter):
         assert data[0]["role"] == "Main orchestrator agent"
         assert data[0]["type"] == "assistant"
         assert data[0]["status"] == "idle"
+        assert data[0]["project_id"] is None
 
 
 @pytest.mark.asyncio
@@ -337,6 +338,30 @@ async def test_agents_endpoint_includes_idle_projects(kernel, adapter):
         assert idle["status"] == "idle"
         assert idle["type"] == "project_manager"
         assert idle["label"] == "Dormant Project"
+        assert idle["project_id"] == project.id
+
+
+@pytest.mark.asyncio
+async def test_agents_endpoint_includes_project_students(kernel, adapter):
+    now = datetime.now(tz=timezone.utc)
+    project = Project(
+        id="demo-proj-students",
+        name="Student Project",
+        created_at=now,
+        updated_at=now,
+        student_agents=[StudentAgentConfig(id="researcher", label="Researcher")],
+    )
+    kernel.project_store.list_projects.return_value = [project]
+
+    app = _make_app(kernel, adapter)
+    async with TestClient(TestServer(app)) as client:
+        resp = await client.get("/api/agents")
+        assert resp.status == 200
+        data = await resp.json()
+        student = next(a for a in data if a["id"] == f"student:{project.id}:researcher")
+        assert student["type"] == "project_student"
+        assert student["chat_enabled"] is False
+        assert student["project_id"] == project.id
 
 
 @pytest.mark.asyncio
