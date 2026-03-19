@@ -1,6 +1,7 @@
 """Configuration schema using Pydantic."""
 
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -11,6 +12,7 @@ class ProviderConfig(BaseModel):
     api_key: str = ""
     api_base: str | None = None
     model: str = "anthropic/claude-sonnet-4-5"
+    reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"] | None = None
 
 
 class AgentConfig(BaseModel):

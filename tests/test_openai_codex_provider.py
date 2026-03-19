@@ -300,6 +300,30 @@ class TestCompleteTextResponse:
         assert resp.output_tokens == 0
         assert resp.model == "openai-codex/gpt-5.1-codex"
 
+    async def test_includes_reasoning_effort_when_configured(self):
+        config = ProviderConfig(
+            model="openai-codex/gpt-5.1-codex",
+            reasoning_effort="high",
+        )
+        provider = OpenAICodexProvider(config)
+
+        fake_token = MagicMock()
+        fake_token.account_id = "acct_123"
+        fake_token.access = "tok_abc"
+
+        with (
+            patch(
+                "drclaw.providers.openai_codex_provider._request_codex",
+                new=AsyncMock(return_value=("done", [], "end_turn")),
+            ) as mock_request,
+            patch("oauth_cli_kit.get_token", return_value=fake_token),
+        ):
+            resp = await provider.complete(messages=[{"role": "user", "content": "hi"}])
+
+        assert resp.content == "done"
+        body = mock_request.await_args.args[2]
+        assert body["reasoning"] == {"effort": "high"}
+
 
 class TestCompleteToolCallResponse:
     async def test_tool_call(self):

@@ -109,6 +109,56 @@ async def test_litellm_provider_parses_text_response() -> None:
     assert resp.output_tokens == 5
 
 
+async def test_litellm_provider_passes_reasoning_effort_when_configured() -> None:
+    provider = LiteLLMProvider(
+        ProviderConfig(model="openai/gpt-5", reasoning_effort="high")
+    )
+    raw = _make_litellm_response(content="hello world", finish_reason="stop")
+
+    with patch("litellm.acompletion", new=AsyncMock(return_value=raw)) as mock_completion:
+        await provider.complete([{"role": "user", "content": "hi"}])
+
+    assert mock_completion.await_args.kwargs["reasoning_effort"] == "high"
+    assert "temperature" not in mock_completion.await_args.kwargs
+
+
+async def test_litellm_provider_omits_reasoning_effort_when_unset() -> None:
+    provider = LiteLLMProvider(ProviderConfig(model="openai/gpt-5"))
+    raw = _make_litellm_response(content="hello world", finish_reason="stop")
+
+    with patch("litellm.acompletion", new=AsyncMock(return_value=raw)) as mock_completion:
+        await provider.complete([{"role": "user", "content": "hi"}])
+
+    assert "reasoning_effort" not in mock_completion.await_args.kwargs
+    assert "temperature" not in mock_completion.await_args.kwargs
+
+
+async def test_litellm_provider_keeps_temperature_for_gpt_5_1_with_reasoning_none() -> None:
+    provider = LiteLLMProvider(
+        ProviderConfig(model="openai/gpt-5.1", reasoning_effort="none")
+    )
+    raw = _make_litellm_response(content="hello world", finish_reason="stop")
+
+    with patch("litellm.acompletion", new=AsyncMock(return_value=raw)) as mock_completion:
+        await provider.complete([{"role": "user", "content": "hi"}])
+
+    assert mock_completion.await_args.kwargs["reasoning_effort"] == "none"
+    assert mock_completion.await_args.kwargs["temperature"] == 0.1
+
+
+async def test_litellm_provider_omits_temperature_for_gpt_5_1_with_reasoning_enabled() -> None:
+    provider = LiteLLMProvider(
+        ProviderConfig(model="openai/gpt-5.1", reasoning_effort="low")
+    )
+    raw = _make_litellm_response(content="hello world", finish_reason="stop")
+
+    with patch("litellm.acompletion", new=AsyncMock(return_value=raw)) as mock_completion:
+        await provider.complete([{"role": "user", "content": "hi"}])
+
+    assert mock_completion.await_args.kwargs["reasoning_effort"] == "low"
+    assert "temperature" not in mock_completion.await_args.kwargs
+
+
 async def test_litellm_provider_parses_cost_fields() -> None:
     provider = LiteLLMProvider(ProviderConfig(model="openai/gpt-4o"))
     raw = _make_litellm_response(content="hello world", finish_reason="stop")
