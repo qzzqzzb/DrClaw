@@ -1,0 +1,11 @@
+name: paper push
+description: Track, search, and monitor academic papers across arXiv, PubMed, and
+  other scientific literature sources, provide daily paper push according to user interests or requirements.
+i18n:
+  zh:
+    name: 虾推送
+    description: 在 arXiv、PubMed 等来源上追踪并检索学术论文，为用户提供每日论文推送服务。
+avatar: /assets/avatars/20.png
+tags: []
+goals: []
+equipment_refs: []
