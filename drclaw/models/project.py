@@ -22,6 +22,14 @@ class CorruptProjectStoreError(Exception):
 
 
 @dataclass
+class StudentAgentConfig:
+    id: str
+    label: str
+    enabled: bool = True
+    soul: str = ""
+
+
+@dataclass
 class Project:
     id: str
     name: str
@@ -32,6 +40,7 @@ class Project:
     goals: str = ""
     tags: list[str] = field(default_factory=list)
     hub_template: str | None = None
+    student_agents: list[StudentAgentConfig] = field(default_factory=list)
 
 
 @runtime_checkable
@@ -60,10 +69,46 @@ def _to_dict(project: Project) -> dict[str, Any]:
         "goals": project.goals,
         "tags": project.tags,
         "hub_template": project.hub_template,
+        "student_agents": [
+            {
+                "id": student.id,
+                "label": student.label,
+                "enabled": student.enabled,
+                "soul": student.soul,
+            }
+            for student in project.student_agents
+        ],
     }
 
 
+def _student_from_dict(d: dict[str, Any]) -> StudentAgentConfig:
+    raw_id = d.get("id")
+    student_id = str(raw_id).strip() if raw_id is not None else ""
+    if not student_id:
+        raise ValueError("student agent is missing id")
+
+    raw_label = d.get("label")
+    label = str(raw_label).strip() if raw_label is not None else ""
+    if not label:
+        label = student_id
+
+    raw_soul = d.get("soul")
+    soul = str(raw_soul) if raw_soul is not None else ""
+
+    return StudentAgentConfig(
+        id=student_id,
+        label=label,
+        enabled=bool(d.get("enabled", True)),
+        soul=soul,
+    )
+
+
 def _from_dict(d: dict[str, Any]) -> Project:
+    raw_students = d.get("student_agents", [])
+    if raw_students is None:
+        raw_students = []
+    if not isinstance(raw_students, list):
+        raise ValueError("student_agents must be a list")
     return Project(
         id=d["id"],
         name=d["name"],
@@ -74,6 +119,11 @@ def _from_dict(d: dict[str, Any]) -> Project:
         goals=d.get("goals", ""),
         tags=d.get("tags", []),
         hub_template=d.get("hub_template"),
+        student_agents=[
+            _student_from_dict(item)
+            for item in raw_students
+            if isinstance(item, dict)
+        ],
     )
 
 

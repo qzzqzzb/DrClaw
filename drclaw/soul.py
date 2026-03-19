@@ -126,6 +126,11 @@ def project_soul_path(workspace_dir: Path) -> Path:
     return workspace_dir / "SOUL.md"
 
 
+def student_soul_path(agent_dir: Path) -> Path:
+    """Return the student-agent SOUL.md path under its private state dir."""
+    return agent_dir / "SOUL.md"
+
+
 def load_main_soul(data_path: Path) -> str:
     """Load main-agent SOUL.md content, creating the file from template if missing."""
     return _load_or_init(main_soul_path(data_path), MAIN_SOUL_TEMPLATE)
@@ -134,3 +139,9 @@ def load_main_soul(data_path: Path) -> str:
 def load_project_soul(workspace_dir: Path) -> str:
     """Load project-agent SOUL.md content, creating the file from template if missing."""
     return _load_or_init(project_soul_path(workspace_dir), PROJECT_SOUL_TEMPLATE)
+
+
+def load_student_soul(agent_dir: Path, *, fallback: str = "") -> str:
+    """Load student-agent SOUL.md content, creating a default if missing."""
+    template = fallback.strip() or PROJECT_SOUL_TEMPLATE
+    return _load_or_init(student_soul_path(agent_dir), template)

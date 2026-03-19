@@ -282,6 +282,42 @@ class TestDaemon:
         assert Daemon._outbound_dest(system_msg) == "proj:abc"
         assert Daemon._outbound_dest(feishu_msg) == "feishu:ou_123"
 
+    def test_debug_listener_prints_student_tool_exec(
+        self, config: DrClawConfig, mock_provider: MagicMock,
+    ) -> None:
+        d = Daemon(config, mock_provider)
+        with patch("drclaw.daemon.server.console.print") as mock_print:
+            d._handle_debug_event(
+                {
+                    "type": "tool_exec",
+                    "agent_id": "student:proj-1:researcher",
+                    "tool_name": "web_fetch",
+                    "result": "Fetched result body",
+                }
+            )
+
+        mock_print.assert_called_once()
+        printed = mock_print.call_args.args[0]
+        assert "student:proj-1:researcher" in printed
+        assert "web_fetch" in printed
+        assert "Fetched result body" in printed
+
+    def test_debug_listener_ignores_non_student_events(
+        self, config: DrClawConfig, mock_provider: MagicMock,
+    ) -> None:
+        d = Daemon(config, mock_provider)
+        with patch("drclaw.daemon.server.console.print") as mock_print:
+            d._handle_debug_event(
+                {
+                    "type": "tool_exec",
+                    "agent_id": "proj:demo",
+                    "tool_name": "web_fetch",
+                    "result": "Fetched result body",
+                }
+            )
+
+        mock_print.assert_not_called()
+
 
 class TestDaemonCLI:
     def test_daemon_command_exists(self):

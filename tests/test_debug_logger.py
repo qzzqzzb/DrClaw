@@ -16,13 +16,14 @@ from tests.conftest import read_jsonl_entries
 def test_log_session_start(tmp_path: Path) -> None:
     path = tmp_path / "debug.jsonl"
     dl = DebugLogger(path)
-    dl.log_session_start("cli:main", "anthropic/claude-sonnet-4-5")
+    dl.log_session_start("cli:main", "anthropic/claude-sonnet-4-5", agent_id="main")
     dl.close()
 
     entries = read_jsonl_entries(path)
     start = entries[0]
     assert start["type"] == "session_start"
     assert start["session_key"] == "cli:main"
+    assert start["agent_id"] == "main"
     assert start["model"] == "anthropic/claude-sonnet-4-5"
     assert "ts" in start
 
@@ -40,13 +41,15 @@ def test_log_request_summary(tmp_path: Path) -> None:
         {"type": "function", "function": {"name": "a"}},
         {"type": "function", "function": {"name": "b"}},
     ]
-    dl.log_request(0, messages, tools)
+    dl.log_request(0, messages, tools, agent_id="student:demo:researcher", session_key="web:c1")
     dl.close()
 
     entries = read_jsonl_entries(path)
     req = entries[0]
     assert req["type"] == "llm_request"
     assert req["iteration"] == 0
+    assert req["agent_id"] == "student:demo:researcher"
+    assert req["session_key"] == "web:c1"
     assert req["message_count"] == 4
     assert req["roles"] == ["system", "user", "assistant", "user"]
     assert len(req["system_prompt_preview"]) == 500
@@ -65,12 +68,14 @@ def test_log_request_full(tmp_path: Path) -> None:
         {"role": "user", "content": "hello"},
     ]
     tools = [{"type": "function", "function": {"name": "a"}}]
-    dl.log_request(0, messages, tools)
+    dl.log_request(0, messages, tools, agent_id="main", session_key="cli:main")
     dl.close()
 
     entries = read_jsonl_entries(path)
     req = entries[0]
     assert req["type"] == "llm_request"
+    assert req["agent_id"] == "main"
+    assert req["session_key"] == "cli:main"
     assert req["messages"] == messages
     assert req["tools"] == tools
 
@@ -85,13 +90,15 @@ def test_log_response(tmp_path: Path) -> None:
         input_tokens=100,
         output_tokens=50,
     )
-    dl.log_response(0, response)
+    dl.log_response(0, response, agent_id="student:demo:researcher", session_key="web:c1")
     dl.close()
 
     entries = read_jsonl_entries(path)
     resp = entries[0]
     assert resp["type"] == "llm_response"
     assert resp["iteration"] == 0
+    assert resp["agent_id"] == "student:demo:researcher"
+    assert resp["session_key"] == "web:c1"
     assert resp["content"] == "Hello!"
     assert resp["tool_calls"] == []
     assert resp["stop_reason"] == "end_turn"
@@ -125,13 +132,22 @@ def test_log_response_with_tool_calls(tmp_path: Path) -> None:
 def test_log_tool_exec(tmp_path: Path) -> None:
     path = tmp_path / "debug.jsonl"
     dl = DebugLogger(path)
-    dl.log_tool_exec(1, "list_projects", {}, "Found 3 projects")
+    dl.log_tool_exec(
+        1,
+        "list_projects",
+        {},
+        "Found 3 projects",
+        agent_id="student:demo:researcher",
+        session_key="web:c1",
+    )
     dl.close()
 
     entries = read_jsonl_entries(path)
     te = entries[0]
     assert te["type"] == "tool_exec"
     assert te["iteration"] == 1
+    assert te["agent_id"] == "student:demo:researcher"
+    assert te["session_key"] == "web:c1"
     assert te["tool_name"] == "list_projects"
     assert te["arguments"] == {}
     assert te["result"] == "Found 3 projects"
@@ -195,6 +211,27 @@ def test_close_idempotent(tmp_path: Path) -> None:
     # Only one session_end
     ends = [e for e in entries if e["type"] == "session_end"]
     assert len(ends) == 1
+
+
+def test_listener_receives_written_entries(tmp_path: Path) -> None:
+    path = tmp_path / "debug.jsonl"
+    dl = DebugLogger(path)
+    seen: list[dict] = []
+    dl.add_listener(seen.append)
+
+    dl.log_response(
+        0,
+        LLMResponse("hi", [], "end_turn", 1, 1),
+        agent_id="student:demo:researcher",
+        session_key="web:c1",
+    )
+    dl.close()
+
+    assert seen
+    assert seen[0]["type"] == "llm_response"
+    assert seen[0]["agent_id"] == "student:demo:researcher"
+    assert seen[0]["session_key"] == "web:c1"
+    assert "ts" in seen[0]
 
 
 def test_full_lifecycle(tmp_path: Path) -> None:

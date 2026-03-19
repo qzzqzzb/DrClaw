@@ -14,6 +14,11 @@ import yaml
 from aiohttp import WSMsgType, web
 from pydantic import ValidationError
 
+from drclaw.agent.project_agent import (
+    project_manager_agent_id,
+    project_student_agent_id,
+    project_student_state_dir,
+)
 from drclaw.agent.registry import AgentHandle, AgentStatus
 from drclaw.config.loader import save_config
 from drclaw.config.schema import DrClawConfig
@@ -42,14 +47,15 @@ SKILL_SOURCE_LABELS = {
 SKILL_SOURCE_LABEL = SKILL_SOURCE_LABELS[DEFAULT_WEB_LOCALE]
 AGENT_ROLE_LABELS = {
     "main": {"en": "Main orchestrator agent", "zh": "主控协调智能体"},
-    "project": {"en": "Project execution agent", "zh": "项目执行智能体"},
+    "project_manager": {"en": "Project manager agent", "zh": "项目管理智能体"},
+    "project_student": {"en": "Project student agent", "zh": "项目学生智能体"},
     "equipment": {"en": "Equipment runtime agent", "zh": "设备运行智能体"},
     "external": {"en": "External provider agent", "zh": "外部智能体"},
 }
 AGENT_SKILL_VARIANT_WARNING = (
     "Multiple agent copies exist and may differ; showing one deterministic copy."
 )
-_AGENT_SOURCE_PREFIXES = ("proj:", "equip:", "claude_code:", "ext:")
+_AGENT_SOURCE_PREFIXES = ("proj:", "student:", "equip:", "claude_code:", "ext:")
 _AGENT_SOURCE_EXACT = {"main", "cron"}
 _CHAT_FILES_MAX_COUNT = 10
 _CHAT_FILE_MAX_BYTES = 20 * 1024 * 1024
@@ -701,13 +707,24 @@ def _agent_payload_for_handle(
     display_name: str | None = None,
     avatar: str | None = None,
 ) -> dict[str, str | None]:
-    role_type = "assistant" if handle.agent_type == "main" else "student"
+    role_type = {
+        "main": "assistant",
+        "project_manager": "project_manager",
+        "project_student": "project_student",
+        "project": "project_manager",
+    }.get(handle.agent_type, "assistant")
     if handle.agent_type == "main":
         name = "虾秘"
         role_key = "main"
+        chat_enabled = True
+    elif handle.agent_type in {"project_manager", "project"}:
+        name = handle.label
+        role_key = "project_manager"
+        chat_enabled = True
     else:
         name = handle.label
-        role_key = "project"
+        role_key = "project_student"
+        chat_enabled = False
     role = _localized_agent_role(role_key, DEFAULT_WEB_LOCALE)
     status = "error" if handle.status == AgentStatus.ERROR else "idle"
     return {
@@ -720,6 +737,7 @@ def _agent_payload_for_handle(
         "type": role_type,
         "status": status,
         "avatar": avatar,
+        "chat_enabled": chat_enabled,
     }
 
 
@@ -731,16 +749,37 @@ def _idle_project_payload(
     avatar: str | None = None,
 ) -> dict[str, str | None]:
     return {
-        "id": f"proj:{project.id}",
+        "id": project_manager_agent_id(project.id),
         "label": project.name,
         "name": project.name,
         "display_name": display_name or project.name,
-        "role": "Project execution agent",
-        "display_role": _localized_agent_role("project", locale),
-        "type": "student",
+        "role": _localized_agent_role("project_manager", DEFAULT_WEB_LOCALE),
+        "display_role": _localized_agent_role("project_manager", locale),
+        "type": "project_manager",
         "status": "idle",
         "hub_template": project.hub_template,
         "avatar": avatar,
+        "chat_enabled": True,
+    }
+
+
+def _idle_student_payload(
+    project: "Project",
+    student,
+    *,
+    locale: str = DEFAULT_WEB_LOCALE,
+) -> dict[str, str | None | bool]:
+    return {
+        "id": project_student_agent_id(project.id, student.id),
+        "label": student.label,
+        "name": student.label,
+        "display_name": student.label,
+        "role": _localized_agent_role("project_student", DEFAULT_WEB_LOCALE),
+        "display_role": _localized_agent_role("project_student", locale),
+        "type": "project_student",
+        "status": "idle",
+        "avatar": None,
+        "chat_enabled": False,
     }
 
 
@@ -762,14 +801,17 @@ def _agent_name_map_for_statistics(kernel) -> dict[str, str]:
         if handle.agent_id == "main":
             names[handle.agent_id] = "虾秘"
             continue
-        if handle.project is not None and handle.project.name:
-            names[handle.agent_id] = handle.project.name
+        project = getattr(handle, "project", None)
+        if handle.agent_type in {"project_manager", "project"} and project is not None and project.name:
+            names[handle.agent_id] = project.name
             continue
         if handle.label:
             names[handle.agent_id] = handle.label
 
     for project in kernel.project_store.list_projects():
-        names.setdefault(f"proj:{project.id}", project.name)
+        names.setdefault(project_manager_agent_id(project.id), project.name)
+        for student in project.student_agents:
+            names.setdefault(project_student_agent_id(project.id, student.id), student.label)
 
     for runtime in kernel.equipment_manager.list_runtime_agents():
         runtime_id = runtime.get("id")
@@ -798,7 +840,7 @@ def _agent_display_name_map_for_statistics(kernel, *, locale: str) -> dict[str, 
     template_i18n_by_name = _template_i18n_map(kernel)
     for handle in kernel.registry.list_agents():
         project = getattr(handle, "project", None)
-        if project is None:
+        if project is None or handle.agent_type not in {"project_manager", "project"}:
             continue
         template_name = getattr(project, "hub_template", None)
         if not isinstance(template_name, str) or not template_name:
@@ -813,7 +855,7 @@ def _agent_display_name_map_for_statistics(kernel, *, locale: str) -> dict[str, 
         template_name = project.hub_template
         if not template_name:
             continue
-        agent_id = f"proj:{project.id}"
+        agent_id = project_manager_agent_id(project.id)
         names[agent_id] = _localized_text(
             fallback=names.get(agent_id, project.name),
             locale=locale,
@@ -835,7 +877,11 @@ def _active_agents_for_runtime_context(kernel) -> list[dict[str, str]]:
             if handle.project is not None and handle.project.name
             else handle.label or handle.agent_id
         )
-        role = "project" if handle.agent_type == "project" else "main"
+        role = (
+            "project"
+            if handle.agent_type in {"project_manager", "project"}
+            else "project_student" if handle.agent_type == "project_student" else "main"
+        )
         if handle.agent_id not in seen:
             out.append({"id": handle.agent_id, "name": name, "role": role})
             seen.add(handle.agent_id)
@@ -873,45 +919,51 @@ async def handle_agents(request: web.Request) -> web.Response:
     avatars_by_template = _template_avatar_map(kernel)
     template_i18n_by_name = _template_i18n_map(kernel)
     agents = []
-    represented_project_ids: set[str] = set()
+    represented_agent_ids: set[str] = set()
     for h in kernel.registry.list_agents():
-        if h.agent_type == "project":
-            if h.project is None:
-                continue
-            represented_project_ids.add(h.project.id)
+        project = getattr(h, "project", None)
+        if project is not None:
+            represented_agent_ids.add(h.agent_id)
         display_name = None
-        if h.agent_type == "project" and h.project is not None:
+        if h.agent_type in {"project_manager", "project"} and project is not None:
             display_name = _localized_text(
-                fallback=h.project.name,
+                fallback=project.name,
                 locale=locale,
-                i18n_map=template_i18n_by_name.get(h.project.hub_template or ""),
+                i18n_map=template_i18n_by_name.get(project.hub_template or ""),
                 field="name",
             )
         payload = _agent_payload_for_handle(h, locale=locale, display_name=display_name)
-        if h.agent_type == "project" and h.project is not None:
-            payload["hub_template"] = h.project.hub_template
+        if h.agent_type in {"project_manager", "project"} and project is not None:
+            payload["hub_template"] = project.hub_template
             payload["avatar"] = _resolve_template_avatar(
-                h.project.hub_template,
+                project.hub_template,
                 avatars_by_template,
             )
         agents.append(payload)
 
     for project in kernel.project_store.list_projects():
-        if project.id in represented_project_ids:
-            continue
-        agents.append(
-            _idle_project_payload(
-                project,
-                locale=locale,
-                display_name=_localized_text(
-                    fallback=project.name,
+        manager_id = project_manager_agent_id(project.id)
+        if manager_id not in represented_agent_ids:
+            agents.append(
+                _idle_project_payload(
+                    project,
                     locale=locale,
-                    i18n_map=template_i18n_by_name.get(project.hub_template or ""),
-                    field="name",
-                ),
-                avatar=_resolve_template_avatar(project.hub_template, avatars_by_template),
+                    display_name=_localized_text(
+                        fallback=project.name,
+                        locale=locale,
+                        i18n_map=template_i18n_by_name.get(project.hub_template or ""),
+                        field="name",
+                    ),
+                    avatar=_resolve_template_avatar(project.hub_template, avatars_by_template),
+                )
             )
-        )
+        for student in project.student_agents:
+            if not student.enabled:
+                continue
+            student_id = project_student_agent_id(project.id, student.id)
+            if student_id in represented_agent_ids:
+                continue
+            agents.append(_idle_student_payload(project, student, locale=locale))
 
     for runtime in kernel.equipment_manager.list_runtime_agents():
         runtime_status = runtime.get("status")
@@ -1086,15 +1138,25 @@ def _load_agent_session_messages(kernel, agent_id: str) -> list[dict]:
         session = manager.load("main")
         return session.messages
 
-    if not agent_id.startswith("proj:"):
+    if agent_id.startswith("proj:"):
+        project_id = agent_id.split(":", 1)[1]
+        project = kernel.project_store.get_project(project_id)
+        if project is None:
+            raise KeyError(project_id)
+        sessions_dir = data_path / "projects" / project_id / "sessions"
+    elif agent_id.startswith("student:"):
+        parts = agent_id.split(":", 2)
+        if len(parts) != 3 or not parts[1] or not parts[2]:
+            raise ValueError(f"Unsupported agent_id: {agent_id}")
+        project_id, student_id = parts[1], parts[2]
+        project = kernel.project_store.get_project(project_id)
+        if project is None:
+            raise KeyError(project_id)
+        sessions_dir = project_student_state_dir(data_path / "projects" / project_id, student_id) / "sessions"
+    else:
         raise ValueError(f"Unsupported agent_id: {agent_id}")
 
-    project_id = agent_id.split(":", 1)[1]
-    project = kernel.project_store.get_project(project_id)
-    if project is None:
-        raise KeyError(project_id)
-
-    manager = SessionManager(data_path / "projects" / project_id / "sessions")
+    manager = SessionManager(sessions_dir)
     session = manager.load(agent_id)
     return session.messages
 
@@ -1268,6 +1330,12 @@ async def handle_activate_agent(request: web.Request) -> web.Response:
             status=400,
         )
 
+    if agent_id.startswith("student:"):
+        return web.json_response(
+            {"error": f"Student agents cannot be activated directly: {agent_id}"},
+            status=400,
+        )
+
     if not agent_id.startswith("proj:"):
         return web.json_response(
             {"error": f"Unsupported agent_id: {agent_id}"},
@@ -1316,7 +1384,11 @@ async def handle_get_publish_draft(request: web.Request) -> web.Response:
         )
 
     handle = kernel.registry.get(agent_id)
-    if handle is None or handle.agent_type != "project" or handle.status != AgentStatus.RUNNING:
+    if (
+        handle is None
+        or handle.agent_type not in {"project_manager", "project"}
+        or handle.status != AgentStatus.RUNNING
+    ):
         return web.json_response(
             {"error": "Only active project agents can be published."},
             status=409,
@@ -1355,7 +1427,11 @@ async def handle_publish_agent_to_hub(request: web.Request) -> web.Response:
         )
 
     handle = kernel.registry.get(agent_id)
-    if handle is None or handle.agent_type != "project" or handle.status != AgentStatus.RUNNING:
+    if (
+        handle is None
+        or handle.agent_type not in {"project_manager", "project"}
+        or handle.status != AgentStatus.RUNNING
+    ):
         return web.json_response(
             {"error": "Only active project agents can be published."},
             status=409,
@@ -2069,6 +2145,18 @@ async def handle_ws(request: web.Request) -> web.WebSocketResponse:
                                 "text": f"External agent request failed: {exc}",
                             }
                         )
+                    continue
+
+                if agent_id.startswith("student:"):
+                    await ws.send_json(
+                        {
+                            "type": "error",
+                            "text": (
+                                "Student agents are visible for monitoring only. "
+                                "Send work to the project manager instead."
+                            ),
+                        }
+                    )
                     continue
 
                 handle = kernel.registry.get(agent_id)

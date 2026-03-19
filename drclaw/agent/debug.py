@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -44,16 +45,43 @@ class DebugLogger:
         self._full = full
         self._total_input_tokens = 0
         self._total_output_tokens = 0
+        self._listeners: list[Callable[[dict[str, Any]], None]] = []
         # Human-readable log alongside the JSONL
         self._human_path = path.with_suffix(".log")
         self._human_file = open(self._human_path, "a", encoding="utf-8")  # noqa: SIM115
 
+    def add_listener(self, listener: Callable[[dict[str, Any]], None]) -> None:
+        self._listeners.append(listener)
+
+    def remove_listener(self, listener: Callable[[dict[str, Any]], None]) -> None:
+        self._listeners = [item for item in self._listeners if item is not listener]
+
+    @staticmethod
+    def _attach_context(
+        entry: dict[str, Any],
+        *,
+        agent_id: str | None = None,
+        session_key: str | None = None,
+    ) -> dict[str, Any]:
+        payload = dict(entry)
+        if agent_id:
+            payload["agent_id"] = agent_id
+        if session_key:
+            payload["session_key"] = session_key
+        return payload
+
     def _write(self, entry: dict[str, Any]) -> None:
         if self._file is None:
             return
-        entry.setdefault("ts", timestamp())
-        self._file.write(json.dumps(entry, ensure_ascii=False) + "\n")
+        payload = dict(entry)
+        payload.setdefault("ts", timestamp())
+        self._file.write(json.dumps(payload, ensure_ascii=False) + "\n")
         self._file.flush()
+        for listener in list(self._listeners):
+            try:
+                listener(dict(payload))
+            except Exception:
+                continue
 
     def _write_human(self, text: str) -> None:
         if self._human_file is None:
@@ -61,8 +89,20 @@ class DebugLogger:
         self._human_file.write(text)
         self._human_file.flush()
 
-    def log_session_start(self, session_key: str, model: str) -> None:
-        self._write({"type": "session_start", "session_key": session_key, "model": model})
+    def log_session_start(
+        self,
+        session_key: str,
+        model: str,
+        *,
+        agent_id: str | None = None,
+    ) -> None:
+        self._write(
+            self._attach_context(
+                {"type": "session_start", "session_key": session_key, "model": model},
+                agent_id=agent_id,
+                session_key=session_key,
+            )
+        )
         self._write_human(
             f"{'='*60}\nSession: {session_key}  Model: {model}\n{timestamp()}\n{'='*60}\n\n"
         )
@@ -72,15 +112,22 @@ class DebugLogger:
         iteration: int,
         messages: list[dict[str, Any]],
         tools: list[dict[str, Any]] | None,
+        *,
+        agent_id: str | None = None,
+        session_key: str | None = None,
     ) -> None:
         if self._full:
             self._write(
-                {
-                    "type": "llm_request",
-                    "iteration": iteration,
-                    "messages": messages,
-                    "tools": tools,
-                }
+                self._attach_context(
+                    {
+                        "type": "llm_request",
+                        "iteration": iteration,
+                        "messages": messages,
+                        "tools": tools,
+                    },
+                    agent_id=agent_id,
+                    session_key=session_key,
+                )
             )
         else:
             roles = [m["role"] for m in messages if "role" in m]
@@ -98,15 +145,19 @@ class DebugLogger:
                         last_user = str(last_user)
                     break
             self._write(
-                {
-                    "type": "llm_request",
-                    "iteration": iteration,
-                    "message_count": len(messages),
-                    "roles": roles,
-                    "system_prompt_preview": system_prompt,
-                    "last_user_message": last_user,
-                    "tool_count": len(tools) if tools else 0,
-                }
+                self._attach_context(
+                    {
+                        "type": "llm_request",
+                        "iteration": iteration,
+                        "message_count": len(messages),
+                        "roles": roles,
+                        "system_prompt_preview": system_prompt,
+                        "last_user_message": last_user,
+                        "tool_count": len(tools) if tools else 0,
+                    },
+                    agent_id=agent_id,
+                    session_key=session_key,
+                )
             )
 
         # Human log: only the latest user message (not the full context)
@@ -121,20 +172,31 @@ class DebugLogger:
             self._write_human(f"--- Turn (iteration {iteration}) ---\n")
             self._write_human(f"[USER] {last_user}\n\n")
 
-    def log_response(self, iteration: int, response: LLMResponse) -> None:
+    def log_response(
+        self,
+        iteration: int,
+        response: LLMResponse,
+        *,
+        agent_id: str | None = None,
+        session_key: str | None = None,
+    ) -> None:
         self._total_input_tokens += response.input_tokens
         self._total_output_tokens += response.output_tokens
         tc = [{"name": t.name, "arguments": t.arguments} for t in response.tool_calls]
         self._write(
-            {
-                "type": "llm_response",
-                "iteration": iteration,
-                "content": response.content,
-                "tool_calls": tc,
-                "stop_reason": response.stop_reason,
-                "input_tokens": response.input_tokens,
-                "output_tokens": response.output_tokens,
-            }
+            self._attach_context(
+                {
+                    "type": "llm_response",
+                    "iteration": iteration,
+                    "content": response.content,
+                    "tool_calls": tc,
+                    "stop_reason": response.stop_reason,
+                    "input_tokens": response.input_tokens,
+                    "output_tokens": response.output_tokens,
+                },
+                agent_id=agent_id,
+                session_key=session_key,
+            )
         )
 
         if response.content:
@@ -144,16 +206,27 @@ class DebugLogger:
             self._write_human(f"[TOOL CALL] {t.name}({args_str})\n")
 
     def log_tool_exec(
-        self, iteration: int, tool_name: str, arguments: dict[str, Any], result: str
+        self,
+        iteration: int,
+        tool_name: str,
+        arguments: dict[str, Any],
+        result: str,
+        *,
+        agent_id: str | None = None,
+        session_key: str | None = None,
     ) -> None:
         self._write(
-            {
-                "type": "tool_exec",
-                "iteration": iteration,
-                "tool_name": tool_name,
-                "arguments": arguments,
-                "result": result,
-            }
+            self._attach_context(
+                {
+                    "type": "tool_exec",
+                    "iteration": iteration,
+                    "tool_name": tool_name,
+                    "arguments": arguments,
+                    "result": result,
+                },
+                agent_id=agent_id,
+                session_key=session_key,
+            )
         )
 
         self._write_human(f"[TOOL RESULT] {tool_name} → {result}\n\n")

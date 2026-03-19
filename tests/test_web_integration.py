@@ -311,7 +311,7 @@ async def test_agents_endpoint_zh_locale_uses_display_name(kernel, adapter):
         assert main["display_role"] == "主控协调智能体"
         assert idle["name"] == "Template Project"
         assert idle["display_name"] == "猫咪智能体"
-        assert idle["display_role"] == "项目执行智能体"
+        assert idle["display_role"] == "项目管理智能体"
 
 
 @pytest.mark.asyncio
@@ -335,7 +335,7 @@ async def test_agents_endpoint_includes_idle_projects(kernel, adapter):
         assert f"proj:{project.id}" in ids
         idle = next(a for a in data if a["id"] == f"proj:{project.id}")
         assert idle["status"] == "idle"
-        assert idle["type"] == "student"
+        assert idle["type"] == "project_manager"
         assert idle["label"] == "Dormant Project"
 
 

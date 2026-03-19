@@ -283,6 +283,17 @@ Note: this switch only affects the Web UI. External-agent callbacks still assume
 
 We have a list of beta features. These features integrated in the main version, but not fully tested. If you want to use them, be careful. 
 
+### Multi-Agent Per Project
+
+A single project can now run as one `project manager` plus multiple internal `student agents`.
+
+- `proj:<project_id>` remains the only project-facing manager agent and is the only project target used by the `main` assistant
+- `student:<project_id>:<student_id>` agents are internal project workers; they are currently managed by the project manager and do not accept direct `main`-assistant task routing
+- All students in the same project share `projects/<project_id>/workspace`
+- The manager and each student keep separate `MEMORY.md`, `HISTORY.md`, session history, and SOUL / config state
+- `/api/agents` and runtime agent listings now distinguish `project_manager` from `project_student`
+- In daemon `--debug` / `--debug-full` mode, student execution summaries are printed to the console and debug JSONL entries now include `agent_id`
+
 ### Docker Sandbox Jobs
 
 Student agents can now use `create_job` to start a Docker-backed sandbox job for high-risk shell work.

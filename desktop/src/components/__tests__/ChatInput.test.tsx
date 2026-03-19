@@ -6,7 +6,7 @@ import { useChatStore } from "../../stores/chatStore"
 describe("ChatInput", () => {
   beforeEach(() => {
     useChatStore.setState({
-      agents: [],
+      agents: [{ id: "main", label: "Assistant Agent", type: "assistant", status: "idle", chat_enabled: true }],
       activeAgentId: "main",
       messages: {},
       connectionStatus: "connected",
@@ -52,7 +52,29 @@ describe("ChatInput", () => {
     const onSend = vi.fn()
     render(<ChatInput onSend={onSend} />)
 
-    const input = screen.getByPlaceholderText("Connecting...") as HTMLInputElement
+    const input = screen.getByPlaceholderText("Select an agent...") as HTMLInputElement
+    expect(input.disabled).toBe(true)
+  })
+
+  it("is disabled for view-only student agents", () => {
+    useChatStore.setState({
+      agents: [
+        {
+          id: "student:p1:researcher",
+          label: "Researcher",
+          type: "project_student",
+          status: "idle",
+          chat_enabled: false,
+        },
+      ],
+      activeAgentId: "student:p1:researcher",
+    })
+    const onSend = vi.fn()
+    render(<ChatInput onSend={onSend} />)
+
+    const input = screen.getByPlaceholderText(
+      "This agent is view-only. Send work to the project manager."
+    ) as HTMLInputElement
     expect(input.disabled).toBe(true)
   })
 
