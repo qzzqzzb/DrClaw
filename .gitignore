@@ -24,6 +24,9 @@ tmp/
 # macOS
 .DS_Store
 
+# Local demo assets
+assets/demos/demo-internagent-enso.gif
+
 # Claude Code
 .claude/
 CLAUDE.md
