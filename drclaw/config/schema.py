@@ -123,6 +123,15 @@ class ClaudeCodeConfig(BaseModel):
     expose_tools_to_sessions: list[str] = Field(default_factory=list)
 
 
+class AcpxConfig(BaseModel):
+    """ACPX CLI guidance/configuration for agents using exec/long_exec."""
+
+    enabled: bool = False
+    command: str = "acpx"
+    default_agent: str = "codex"
+    prefer_long_exec: bool = True
+
+
 class ExternalAgentConfig(BaseModel):
     """External agent bridge configuration."""
 
@@ -150,6 +159,7 @@ class DrClawConfig(BaseModel):
     tools: ToolsConfig = ToolsConfig()
     env: EnvConfig = EnvConfig()
     claude_code: ClaudeCodeConfig = ClaudeCodeConfig()
+    acpx: AcpxConfig = AcpxConfig()
     external_agents: list[ExternalAgentConfig] = Field(default_factory=list)
 
     @model_validator(mode="before")

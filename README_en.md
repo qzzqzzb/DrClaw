@@ -362,6 +362,97 @@ Notes:
 - v1 assumes callback reachability on same host (`127.0.0.1`).
 - v1 callback auth is intentionally omitted for prototype use in trusted environments.
 
+### Use Codex from Project Agents via ACPX
+
+DrClaw can now let `project agents` use Codex by executing the standard `acpx` CLI through the existing `exec` / `long_exec` tools. The current implementation does **not** add a dedicated ACPX tool and does **not** turn ACPX into a provider. Instead, agents receive ACPX guidance plus a built-in skill, then run shell commands themselves.
+
+Prerequisites:
+- `acpx` is installed globally on the host
+- `acpx codex ...` already works in the host terminal
+
+#### 1. Seed the built-in ACPX skill
+
+For a fresh install:
+
+```bash
+drclaw onboard
+```
+
+For an older data directory, running `drclaw onboard` again is also fine; it will backfill missing built-in skills into `~/.drclaw/skills/`. After that you should see:
+
+```bash
+ls ~/.drclaw/skills/acpx
+```
+
+#### 2. Configure ACPX
+
+Add this to `~/.drclaw/config.json`:
+
+```json
+{
+  "acpx": {
+    "enabled": true,
+    "command": "acpx",
+    "default_agent": "codex",
+    "prefer_long_exec": true
+  }
+}
+```
+
+Meaning:
+- `enabled=true`: inject ACPX usage guidance into project agents
+- `command`: ACPX executable name to run
+- `default_agent`: currently `codex`
+- `prefer_long_exec=true`: prefer `long_exec` to avoid the normal 60-second timeout
+
+#### 3. How to test it
+
+First verify ACPX itself on the host:
+
+```bash
+acpx --help
+acpx codex exec 'Reply with exactly: acpx-ok'
+```
+
+Then create a test project and open project chat:
+
+```bash
+drclaw projects create "acpx-test"
+drclaw chat --project acpx-test
+```
+
+In the project chat, send:
+
+```text
+Do not answer directly. Use long_exec to call acpx codex exec and make it output exactly: drclaw-acpx-ok. Show me both the command and the result.
+```
+
+To test a persistent session, send:
+
+```text
+Use long_exec to run these commands:
+1. acpx codex sessions ensure --name drclaw-proj-<current-project-id>-smoke
+2. acpx codex -s drclaw-proj-<current-project-id>-smoke 'Reply with exactly: session-ok'
+3. acpx codex -s drclaw-proj-<current-project-id>-smoke status
+4. acpx codex sessions close drclaw-proj-<current-project-id>-smoke
+Return the command and result for each step.
+```
+
+Success criteria:
+- the agent explicitly calls `exec` or `long_exec`
+- it actually runs `acpx codex ...`
+- the returned answer is the real ACPX / Codex output, not a fabricated direct reply from the agent
+
+#### 4. Session naming and cleanup
+
+- `acpx codex exec ...` is one-shot and does not require session cleanup
+- persistent sessions created by project agents must use the prefix `drclaw-proj-<project-id>-`
+- persistent ACPX sessions are not closed automatically when DrClaw exits; close them explicitly when the task is done:
+
+```bash
+acpx codex sessions close drclaw-proj-<project-id>-<task-suffix>
+```
+
 ## Usage
 
 ```bash
