@@ -1205,10 +1205,26 @@ body {
 
 #chat-header {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 10px;
   flex: 1;
   height: 100%;
+  min-width: 0;
+}
+
+.chat-header-content {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}
+
+.chat-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -1239,12 +1255,69 @@ body {
   white-space: nowrap;
 }
 
+.chat-header-badge {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4b5563;
+  background: #f9fafb;
+  flex-shrink: 0;
+}
+
+.chat-header-badge.view-only {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
 #chat-header-loading {
   width: 36px;
   height: 36px;
   display: block;
   flex-shrink: 0;
   animation: avatar-rotate 1.1s linear infinite;
+}
+
+.chat-header-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.chat-header-tab {
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 7px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chat-header-tab:hover {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.chat-header-tab.active {
+  border-color: #60a5fa;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.chat-header-tab.view-only {
+  background: #f8fafc;
 }
 
 .floating-chat-actions {
@@ -2272,6 +2345,9 @@ body {
       attach_file: "Attach files",
       open_chat: "Open Chat",
       type_message: "Type a message...",
+      project_manager_tab: "Manager",
+      student_view_only: "View only",
+      student_view_only_placeholder: "This student is managed by the project manager. Send work from the Manager tab.",
       monitor_agents: "Agents",
       monitor_links: "Links",
       monitor_events: "Events",
@@ -2331,6 +2407,9 @@ body {
       attach_file: "附加文件",
       open_chat: "打开聊天",
       type_message: "输入消息...",
+      project_manager_tab: "管理",
+      student_view_only: "只读",
+      student_view_only_placeholder: "该 student 由项目 manager 管理，请在“管理”标签发送任务。",
       monitor_agents: "智能体",
       monitor_links: "连线",
       monitor_events: "事件",
@@ -2439,6 +2518,44 @@ body {
   function agentDisplayName(agent) {
     if (!agent || typeof agent !== "object") return "";
     return String(agent.display_name || agent.name || agent.label || agent.id || "");
+  }
+
+  function projectIdForAgent(agent) {
+    if (!agent || typeof agent !== "object") return null;
+    const explicit = typeof agent.project_id === "string" ? agent.project_id.trim() : "";
+    if (explicit) return explicit;
+    const id = typeof agent.id === "string" ? agent.id.trim() : "";
+    if (id.startsWith("proj:")) return id.slice(5) || null;
+    if (id.startsWith("student:")) {
+      const parts = id.split(":");
+      return parts.length >= 3 && parts[1] ? parts[1] : null;
+    }
+    return null;
+  }
+
+  function buildProjectTabs(agentId) {
+    const current = getAgentById(agentId);
+    const projectId = projectIdForAgent(current);
+    if (!projectId) return [];
+    const projectAgents = agents.filter(function(agent) {
+      return projectIdForAgent(agent) === projectId
+        && (agent.type === "project_manager" || agent.type === "project_student");
+    });
+    const hasStudent = projectAgents.some(function(agent) {
+      return agent.type === "project_student";
+    });
+    if (!hasStudent) return [];
+    projectAgents.sort(function(a, b) {
+      if (a.type === "project_manager" && b.type !== "project_manager") return -1;
+      if (b.type === "project_manager" && a.type !== "project_manager") return 1;
+      return agentDisplayName(a).localeCompare(agentDisplayName(b));
+    });
+    return projectAgents;
+  }
+
+  function projectManagerForAgent(agentId) {
+    const tabs = buildProjectTabs(agentId);
+    return tabs.find(function(agent) { return agent.type === "project_manager"; }) || null;
   }
 
   function applyLanguage(lang) {
@@ -3897,10 +4014,13 @@ body {
     }
   }
 
-  function pickActiveAgent(preferredId) {
+  function pickActiveAgent(preferredId, options) {
+    const allowViewOnlyPreferred = Boolean(options && options.allowViewOnlyPreferred);
     if (preferredId) {
       const preferred = getAgentById(preferredId);
-      if (preferred && agentChatEnabled(preferred)) return preferredId;
+      if (preferred && (allowViewOnlyPreferred || agentChatEnabled(preferred))) return preferredId;
+      const manager = projectManagerForAgent(preferredId);
+      if (manager) return manager.id;
     }
     if (activeAgent) {
       const current = getAgentById(activeAgent);
@@ -3934,6 +4054,7 @@ body {
       )
       : withAssetCacheBust("/assets/DrClaw.png");
     const isWorking = agent ? uiStatus(agent) === "working" : Boolean(pendingByAgent[activeAgent]);
+    const projectTabs = buildProjectTabs(activeAgent);
 
     chatHeader.innerHTML = "";
     const avatarWrap = document.createElement("div");
@@ -3947,20 +4068,55 @@ body {
     }, { once: true });
     avatarWrap.appendChild(avatar);
 
+    const contentWrap = document.createElement("div");
+    contentWrap.className = "chat-header-content";
+    const titleRow = document.createElement("div");
+    titleRow.className = "chat-header-title-row";
     const nameEl = document.createElement("div");
     nameEl.id = "chat-header-name";
     nameEl.textContent = displayName;
+    titleRow.appendChild(nameEl);
 
-    chatHeader.appendChild(avatarWrap);
-    chatHeader.appendChild(nameEl);
+    if (agent && agent.type === "project_student") {
+      const badge = document.createElement("span");
+      badge.className = "chat-header-badge view-only";
+      badge.textContent = t("student_view_only");
+      titleRow.appendChild(badge);
+    }
+
     if (isWorking) {
       const loadingEl = document.createElement("img");
       loadingEl.id = "chat-header-loading";
       loadingEl.src = withAssetCacheBust("/assets/loading.png");
       loadingEl.alt = "";
       loadingEl.setAttribute("aria-hidden", "true");
-      chatHeader.appendChild(loadingEl);
+      titleRow.appendChild(loadingEl);
     }
+
+    contentWrap.appendChild(titleRow);
+
+    if (projectTabs.length > 1) {
+      const tabsEl = document.createElement("div");
+      tabsEl.className = "chat-header-tabs";
+      for (const tabAgent of projectTabs) {
+        const tab = document.createElement("button");
+        tab.type = "button";
+        tab.className = "chat-header-tab"
+          + (tabAgent.id === activeAgent ? " active" : "")
+          + (agentChatEnabled(tabAgent) ? "" : " view-only");
+        tab.textContent = tabAgent.type === "project_manager"
+          ? t("project_manager_tab")
+          : agentDisplayName(tabAgent);
+        tab.onclick = function() {
+          openChat(tabAgent.id);
+        };
+        tabsEl.appendChild(tab);
+      }
+      contentWrap.appendChild(tabsEl);
+    }
+
+    chatHeader.appendChild(avatarWrap);
+    chatHeader.appendChild(contentWrap);
     updatePublishButtonState();
   }
 
@@ -4389,7 +4545,7 @@ body {
     if (chatFileBtn) chatFileBtn.disabled = !enabled;
     msgInput.placeholder = enabled
       ? "Send a message..."
-      : "This student agent is view-only. Send work to the project manager.";
+      : t("student_view_only_placeholder");
   }
 
   function openChat(agentId) {
@@ -4405,7 +4561,7 @@ body {
   }
 
   function enterChat(agentId) {
-    activeAgent = pickActiveAgent(agentId);
+    activeAgent = pickActiveAgent(agentId, { allowViewOnlyPreferred: Boolean(agentId) });
     updateChatHeader();
 
     if (!activeAgent) {
