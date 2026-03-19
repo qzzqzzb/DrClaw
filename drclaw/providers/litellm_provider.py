@@ -11,7 +11,12 @@ import litellm
 from loguru import logger
 
 from drclaw.config.schema import AgentConfig, ProviderConfig
-from drclaw.providers.base import LLMProvider, LLMResponse, ToolCallRequest
+from drclaw.providers.base import (
+    ASSISTANT_PROVIDER_FIELDS_KEY,
+    LLMProvider,
+    LLMResponse,
+    ToolCallRequest,
+)
 
 litellm.suppress_debug_info = True
 
@@ -57,7 +62,7 @@ class LiteLLMProvider(LLMProvider):
         all_messages: list[dict[str, Any]] = []
         if system:
             all_messages.append({"role": "system", "content": system})
-        all_messages.extend(messages)
+        all_messages.extend(self._prepare_messages_for_request(messages))
 
         kwargs: dict[str, Any] = {
             "model": self._model,
@@ -108,6 +113,7 @@ class LiteLLMProvider(LLMProvider):
             stop_reason = "unknown"
 
         content = message.content or None
+        assistant_metadata = self._extract_assistant_metadata(message)
 
         tool_calls: list[ToolCallRequest] = []
         if message.tool_calls:
@@ -133,11 +139,72 @@ class LiteLLMProvider(LLMProvider):
             stop_reason=stop_reason,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            assistant_metadata=assistant_metadata,
             model=model,
             input_cost_usd=input_cost_usd,
             output_cost_usd=output_cost_usd,
             total_cost_usd=total_cost_usd,
         )
+
+    def _prepare_messages_for_request(
+        self,
+        messages: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        prepared: list[dict[str, Any]] = []
+        restore_reasoning = self._should_restore_reasoning_content()
+
+        for msg in messages:
+            if not isinstance(msg, dict):
+                continue
+            prepared_msg = {k: v for k, v in msg.items() if k != ASSISTANT_PROVIDER_FIELDS_KEY}
+            if restore_reasoning and msg.get("role") == "assistant":
+                provider_fields = msg.get(ASSISTANT_PROVIDER_FIELDS_KEY)
+                reasoning_content = self._extract_reasoning_content(provider_fields)
+                if reasoning_content and msg.get("tool_calls"):
+                    prepared_msg["reasoning_content"] = reasoning_content
+            prepared.append(prepared_msg)
+
+        return prepared
+
+    def _should_restore_reasoning_content(self) -> bool:
+        model_lower = self._model.lower()
+        api_base = (self._api_base or "").lower()
+        return (
+            model_lower.startswith("moonshot/")
+            or "/moonshot" in api_base
+            or "moonshot.ai" in api_base
+        )
+
+    @staticmethod
+    def _message_field(message: Any, field: str) -> Any:
+        if isinstance(message, dict):
+            return message.get(field)
+        return getattr(message, field, None)
+
+    @classmethod
+    def _extract_assistant_metadata(cls, message: Any) -> dict[str, Any] | None:
+        reasoning_content = cls._extract_reasoning_content(
+            cls._message_field(message, "reasoning_content")
+        )
+        if not reasoning_content:
+            reasoning_content = cls._extract_reasoning_content(
+                cls._message_field(message, "provider_specific_fields")
+            )
+        if not reasoning_content:
+            return None
+        return {"reasoning_content": reasoning_content}
+
+    @staticmethod
+    def _extract_reasoning_content(value: Any) -> str | None:
+        if isinstance(value, str):
+            text = value.strip()
+            return text or None
+        if isinstance(value, dict):
+            raw = value.get("reasoning_content")
+            if isinstance(raw, str):
+                text = raw.strip()
+                return text or None
+        return None
 
     def _extract_costs(
         self,

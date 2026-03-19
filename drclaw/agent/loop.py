@@ -14,7 +14,7 @@ from drclaw.agent.debug import DebugLogger
 from drclaw.agent.memory import MemoryStore
 from drclaw.bus.queue import MessageBus
 from drclaw.models.messages import InboundMessage, OutboundMessage
-from drclaw.providers.base import LLMProvider, LLMResponse
+from drclaw.providers.base import ASSISTANT_PROVIDER_FIELDS_KEY, LLMProvider, LLMResponse
 from drclaw.session.manager import Message, Session, SessionManager
 from drclaw.tools.background_tasks import BackgroundToolTaskManager
 from drclaw.tools.registry import ToolRegistry
@@ -201,7 +201,10 @@ class AgentLoop:
                     for tc in response.tool_calls
                 ]
                 self.context_builder.add_assistant_message(
-                    messages, response.content, tool_calls=tc_dicts
+                    messages,
+                    response.content,
+                    tool_calls=tc_dicts,
+                    assistant_metadata=response.assistant_metadata,
                 )
 
                 for tc in response.tool_calls:
@@ -269,7 +272,11 @@ class AgentLoop:
 
             # No tool calls — model is done
             mark = len(messages)
-            self.context_builder.add_assistant_message(messages, response.content)
+            self.context_builder.add_assistant_message(
+                messages,
+                response.content,
+                assistant_metadata=response.assistant_metadata,
+            )
             final_content = response.content
             if on_new_messages:
                 on_new_messages(messages[mark:])
@@ -463,6 +470,10 @@ class AgentLoop:
                         cleaned["content"] = f"{header}\n{content}"
             if role == "assistant" and "tool_calls" in msg:
                 cleaned["tool_calls"] = msg.get("tool_calls")
+            if role == "assistant":
+                provider_fields = msg.get(ASSISTANT_PROVIDER_FIELDS_KEY)
+                if isinstance(provider_fields, dict) and provider_fields:
+                    cleaned[ASSISTANT_PROVIDER_FIELDS_KEY] = dict(provider_fields)
             if role == "tool":
                 if "tool_call_id" in msg:
                     cleaned["tool_call_id"] = msg.get("tool_call_id")
