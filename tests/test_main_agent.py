@@ -58,6 +58,7 @@ def test_main_agent_registers_project_student_management_tools(main_agent: MainA
     assert "create_project_student" in names
     assert "update_project_student" in names
     assert "remove_project_student" in names
+    assert "add_local_hub_skills_to_project_student" in names
 
 
 @pytest.mark.asyncio
@@ -336,6 +337,7 @@ def test_main_agent_has_filesystem_tools(
         "import_skill_to_local_hub",
         "add_local_hub_skills_to_equipment",
         "add_local_hub_skills_to_project",
+        "add_local_hub_skills_to_project_student",
         "list_local_skill_hub_categories",
         "set_local_skill_hub_category_metadata",
         "use_equipment",

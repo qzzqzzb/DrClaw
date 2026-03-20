@@ -301,6 +301,24 @@ def test_project_manager_does_not_load_student_private_skills(
 
 
 @pytest.mark.asyncio
+async def test_student_project_agent_exec_allows_private_workspace(
+    tmp_path: Path, mock_provider: MockProvider
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    project = make_project()
+    student = StudentAgentConfig(id="researcher", label="Researcher")
+    agent = StudentProjectAgent(config, mock_provider, project, student)
+
+    exec_tool = agent.loop.tool_registry.get("exec")
+    assert exec_tool is not None
+
+    private_dir = tmp_path / "projects" / project.id / "agents" / student.id
+    result = await exec_tool.execute({"command": "pwd", "working_dir": str(private_dir)})
+
+    assert str(private_dir.resolve()) in result
+
+
+@pytest.mark.asyncio
 async def test_route_to_student_tool_return_warns_against_polling(
     tmp_path: Path, mock_provider: MockProvider
 ) -> None:

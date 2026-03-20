@@ -49,6 +49,7 @@ from drclaw.tools.equipment_admin_tools import (
     AddEquipmentTool,
     AddLocalHubSkillsToEquipmentTool,
     AddLocalHubSkillsToProjectTool,
+    AddLocalHubSkillsToProjectStudentTool,
     ImportSkillToLocalHubTool,
     ListEquipmentsTool,
     ListLocalSkillHubCategoriesTool,
@@ -95,8 +96,10 @@ def _build_identity(
     base = load_main_soul(data_dir)
     base += (
         "\n\n## Skill Grant Policy\n"
-        "- If a request is to grant a specific student/project access to a local-hub skill, "
+        "- If a request is to grant a local-hub skill to a whole project, "
         "prefer add_local_hub_skills_to_project.\n"
+        "- If a request is to grant a local-hub skill to one specific project student, "
+        "prefer add_local_hub_skills_to_project_student.\n"
         "- Use equipment provisioning tools only when the user asks for shared equipment access."
         "\n\n## Project Student Management\n"
         "- You can manage student agents under a project with the project student tools.\n"
@@ -282,6 +285,13 @@ class MainAgent:
         )
         registry.register(
             AddLocalHubSkillsToProjectTool(
+                self.project_store,
+                data_dir / "projects",
+                local_skill_hub,
+            )
+        )
+        registry.register(
+            AddLocalHubSkillsToProjectStudentTool(
                 self.project_store,
                 data_dir / "projects",
                 local_skill_hub,

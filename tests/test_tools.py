@@ -614,6 +614,34 @@ class TestExecTool:
         result = await tool.execute({"command": "pwd", "working_dir": "subdir"})
         assert str(subdir.resolve()) in result
 
+    async def test_restrict_to_workspace_allows_working_dir_in_secondary_root(
+        self, workspace: Path, tmp_path: Path
+    ) -> None:
+        private_root = tmp_path / "private"
+        private_root.mkdir()
+        tool = ExecTool(
+            restrict_to_workspace=True,
+            working_dir=workspace,
+            allowed_working_dirs=[private_root],
+        )
+        result = await tool.execute({"command": "pwd", "working_dir": str(private_root)})
+        assert str(private_root.resolve()) in result
+
+    async def test_restrict_to_workspace_allows_absolute_paths_in_secondary_root(
+        self, workspace: Path, tmp_path: Path
+    ) -> None:
+        private_root = tmp_path / "private"
+        private_root.mkdir()
+        marker = private_root / "note.txt"
+        marker.write_text("private", encoding="utf-8")
+        tool = ExecTool(
+            restrict_to_workspace=True,
+            working_dir=workspace,
+            allowed_working_dirs=[private_root],
+        )
+        result = await tool.execute({"command": f'cat "{marker}"'})
+        assert "private" in result
+
     async def test_restrict_to_workspace_allows_dev_null(self, workspace: Path) -> None:
         tool = ExecTool(restrict_to_workspace=True, working_dir=workspace)
         result = await tool.execute({"command": f"ls {workspace} 2>/dev/null"})

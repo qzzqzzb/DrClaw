@@ -16,6 +16,7 @@ def register_common_tools(
     workspace: Path,
     write_allowed_dir: Path,
     read_allowed_dir: Path | None = None,
+    exec_allowed_dirs: list[Path] | None = None,
     restrict_exec: bool = True,
     web_search_api_key: str | None = None,
     web_search_max_results: int = 5,
@@ -46,6 +47,7 @@ def register_common_tools(
     registry.register(
         ExecTool(
             working_dir=workspace,
+            allowed_working_dirs=exec_allowed_dirs,
             restrict_to_workspace=restrict_exec,
             env_provider=env_provider,
         )
@@ -64,6 +66,7 @@ def register_common_tools(
         registry.register(
             LongExecTool(
                 working_dir=workspace,
+                allowed_working_dirs=exec_allowed_dirs,
                 restrict_to_workspace=True,
                 env_provider=env_provider,
             )
