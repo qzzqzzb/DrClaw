@@ -133,6 +133,7 @@ async def test_index_returns_html(kernel, adapter):
         assert 'data-route="#/monitor"' not in text
         assert 'id="team-workspace"' in text
         assert 'id="team-chat-panel"' in text
+        assert 'id="team-chat-resizer"' in text
         assert 'id="floating-chat-publish"' in text
         assert 'id="add-agent-btn"' in text
         assert 'id="add-agent-from-scratch"' in text

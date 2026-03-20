@@ -670,13 +670,80 @@ body {
 }
 
 #team-chat-panel {
-  width: 33.333%;
-  min-width: 280px;
-  max-width: 400px;
+  width: 400px;
+  min-width: 0;
+  max-width: none;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e5e7eb;
   background: #fafafa;
+}
+
+#team-chat-resizer {
+  position: relative;
+  width: 12px;
+  flex: 0 0 12px;
+  cursor: col-resize;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.98) 100%);
+  touch-action: none;
+  overflow: visible;
+  z-index: 2;
+}
+
+#team-chat-resizer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 2px;
+  background: #e5e7eb;
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+
+#team-chat-resizer .chat-resizer-handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 5px;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, transform 0.12s ease;
+  pointer-events: none;
+}
+
+#team-chat-resizer .chat-resizer-arrow {
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid #64748b;
+  opacity: 0.95;
+}
+
+#team-chat-resizer:hover::before,
+#team-chat-resizer.active::before {
+  background: #60a5fa;
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.18);
+}
+
+#team-chat-resizer:hover .chat-resizer-handle,
+#team-chat-resizer.active .chat-resizer-handle {
+  border-color: #60a5fa;
+  background: rgba(239, 246, 255, 0.98);
+  box-shadow: 0 8px 18px rgba(96, 165, 250, 0.18);
+  transform: translate(-50%, -50%) scale(1.03);
+}
+
+#team-chat-resizer:hover .chat-resizer-arrow,
+#team-chat-resizer.active .chat-resizer-arrow {
+  border-left-color: #2563eb;
 }
 
 #team-chat-header {
@@ -693,10 +760,17 @@ body {
 
 #office-area {
   flex: 1;
+  min-width: 0;
   overflow: auto;
   padding: 20px;
   background: #eef3f9 url("/assets/office_back.png") center / cover no-repeat;
   position: relative;
+}
+
+body.chat-resizing,
+body.chat-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
 }
 
 .msg-trail {
@@ -1782,9 +1856,13 @@ body {
     width: 100%;
     max-width: none;
     min-width: 0;
+    flex-basis: auto;
     max-height: 45vh;
-    border-right: none;
     border-bottom: 1px solid #e5e7eb;
+  }
+
+  #team-chat-resizer {
+    display: none;
   }
 }
 </style>
@@ -1851,6 +1929,11 @@ body {
               <button id="chat-file-btn" type="button" title="Attach files" data-i18n-title="attach_file" disabled>+</button>
               <button id="send-btn" data-i18n="send" disabled>Send</button>
             </div>
+          </div>
+        </div>
+        <div id="team-chat-resizer" role="separator" aria-orientation="vertical" aria-label="Resize chat panel">
+          <div class="chat-resizer-handle" aria-hidden="true">
+            <span class="chat-resizer-arrow"></span>
           </div>
         </div>
         <div id="office-area">
@@ -2175,6 +2258,11 @@ body {
   const ROUTE_AGENTS_PREFIX = "#/agents/";
   const WEBUI_LANGUAGE_STORAGE_KEY = "drclaw-web-lang-v1";
   const OFFICE_SCROLL_STORAGE_KEY = "drclaw-web-office-scroll-v1";
+  const CHAT_PANEL_WIDTH_STORAGE_KEY = "drclaw-web-chat-panel-width-v1";
+  const CHAT_PANEL_DEFAULT_WIDTH = 400;
+  const CHAT_PANEL_MIN_WIDTH = 400;
+  const CHAT_PANEL_MIN_OFFICE_WIDTH = 120;
+  const MOBILE_LAYOUT_BREAKPOINT = 900;
 
   const agentsGrid = document.getElementById("agents-grid");
   const agentsEmpty = document.getElementById("agents-empty");
@@ -2189,7 +2277,9 @@ body {
   const langSwitchZh = document.getElementById("lang-switch-zh");
   const langSwitchEn = document.getElementById("lang-switch-en");
 
+  const teamWorkspace = document.getElementById("team-workspace");
   const teamChatPanel = document.getElementById("team-chat-panel");
+  const teamChatResizer = document.getElementById("team-chat-resizer");
   const officeArea = document.getElementById("office-area");
   const floatingChatPublishBtn = document.getElementById("floating-chat-publish");
   const chatHeader = document.getElementById("chat-header");
@@ -2304,6 +2394,8 @@ body {
   let currentLanguage = loadWebUiLanguage();
   let pendingOfficeScrollRestore = loadOfficeScrollState();
   let officeScrollRestoreAttempts = 0;
+  let chatPanelWidth = loadChatPanelWidth();
+  let chatResizeSession = null;
   let publishInFlight = false;
   const ASSET_CACHE_BUST = String(Date.now());
 
@@ -2477,6 +2569,121 @@ body {
     } catch (_err) {
       return null;
     }
+  }
+
+  function loadChatPanelWidth() {
+    try {
+      const raw = localStorage.getItem(CHAT_PANEL_WIDTH_STORAGE_KEY);
+      if (!raw) return null;
+      const parsed = Number(raw);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function saveChatPanelWidth(width) {
+    if (!Number.isFinite(width) || width <= 0) return;
+    try {
+      localStorage.setItem(CHAT_PANEL_WIDTH_STORAGE_KEY, String(Math.round(width)));
+    } catch (_err) {
+      // Ignore persistence errors.
+    }
+  }
+
+  function isDesktopTeamLayout() {
+    return window.innerWidth > MOBILE_LAYOUT_BREAKPOINT;
+  }
+
+  function getChatPanelWidthLimits() {
+    const workspaceWidth = teamWorkspace ? teamWorkspace.clientWidth : 0;
+    const resizerWidth = (teamChatResizer && isDesktopTeamLayout()) ? teamChatResizer.offsetWidth : 0;
+    const availableMax = Math.max(0, workspaceWidth - resizerWidth - CHAT_PANEL_MIN_OFFICE_WIDTH);
+    const min = Math.min(CHAT_PANEL_MIN_WIDTH, availableMax);
+    const max = Math.max(min, availableMax);
+    return { min, max };
+  }
+
+  function onChatResizeMove(event) {
+    if (!chatResizeSession || event.pointerId !== chatResizeSession.pointerId) return;
+    const delta = event.clientX - chatResizeSession.startX;
+    syncChatPanelWidth({
+      persist: false,
+      width: chatResizeSession.startWidth + delta,
+    });
+  }
+
+  function stopChatResize(eventOrPointerId) {
+    if (!chatResizeSession) return;
+    const pointerId = typeof eventOrPointerId === "number"
+      ? eventOrPointerId
+      : (eventOrPointerId && typeof eventOrPointerId.pointerId === "number"
+        ? eventOrPointerId.pointerId
+        : null);
+    if (pointerId != null && pointerId !== chatResizeSession.pointerId) return;
+    window.removeEventListener("pointermove", onChatResizeMove);
+    window.removeEventListener("pointerup", stopChatResize);
+    window.removeEventListener("pointercancel", stopChatResize);
+    document.body.classList.remove("chat-resizing");
+    if (teamChatResizer) {
+      teamChatResizer.classList.remove("active");
+      if (chatResizeSession.pointerId != null && typeof teamChatResizer.releasePointerCapture === "function") {
+        try {
+          teamChatResizer.releasePointerCapture(chatResizeSession.pointerId);
+        } catch (_err) {
+          // Ignore lost pointer capture.
+        }
+      }
+    }
+    saveChatPanelWidth(chatPanelWidth);
+    chatResizeSession = null;
+  }
+
+  function syncChatPanelWidth(options) {
+    if (!teamChatPanel) return;
+    if (!isDesktopTeamLayout()) {
+      stopChatResize();
+      teamChatPanel.style.width = "";
+      teamChatPanel.style.flexBasis = "";
+      return;
+    }
+    if (!teamWorkspace || teamWorkspace.clientWidth <= 0) return;
+
+    const preferredWidth = options && Number.isFinite(options.width)
+      ? options.width
+      : (Number.isFinite(chatPanelWidth) ? chatPanelWidth : CHAT_PANEL_DEFAULT_WIDTH);
+    const limits = getChatPanelWidthLimits();
+    const nextWidth = clamp(preferredWidth, limits.min, limits.max);
+    teamChatPanel.style.width = Math.round(nextWidth) + "px";
+    teamChatPanel.style.flexBasis = Math.round(nextWidth) + "px";
+    chatPanelWidth = nextWidth;
+    if (!options || options.persist !== false) {
+      saveChatPanelWidth(nextWidth);
+    }
+  }
+
+  function beginChatResize(event) {
+    if (!teamChatPanel || !teamWorkspace || !teamChatResizer || !isDesktopTeamLayout()) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    stopChatResize();
+    chatResizeSession = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startWidth: teamChatPanel.getBoundingClientRect().width,
+    };
+    if (typeof teamChatResizer.setPointerCapture === "function") {
+      try {
+        teamChatResizer.setPointerCapture(event.pointerId);
+      } catch (_err) {
+        // Ignore pointer capture failures.
+      }
+    }
+    document.body.classList.add("chat-resizing");
+    teamChatResizer.classList.add("active");
+    window.addEventListener("pointermove", onChatResizeMove);
+    window.addEventListener("pointerup", stopChatResize);
+    window.addEventListener("pointercancel", stopChatResize);
+    event.preventDefault();
   }
 
   function saveOfficeScrollState() {
@@ -4954,6 +5161,7 @@ body {
     setActiveView(route.view);
 
     if (route.view === "agents") {
+      syncChatPanelWidth();
       enterChat(route.agentId || activeAgent);
       renderMonitor();
       restoreOfficeScrollIfNeeded();
@@ -5119,14 +5327,21 @@ body {
   if (officeArea) {
     officeArea.addEventListener("scroll", saveOfficeScrollState, { passive: true });
   }
+  if (teamChatResizer) {
+    teamChatResizer.addEventListener("pointerdown", beginChatResize);
+  }
 
   window.addEventListener("hashchange", renderRoute);
   window.addEventListener("beforeunload", saveOfficeScrollState);
   window.addEventListener("pagehide", saveOfficeScrollState);
+  window.addEventListener("resize", function() {
+    syncChatPanelWidth();
+  });
 
   applyLanguage(currentLanguage);
   fetchAgents();
   connectWS();
+  syncChatPanelWidth();
   renderRoute();
 })();
 </script>
