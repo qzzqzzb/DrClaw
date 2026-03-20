@@ -186,6 +186,23 @@ More [beta features](#Beta) here.
 
 After install, edit `~/.drclaw/config.json` to set your LLM provider. The current config format is `providers + active_provider`, and any [litellm-compatible](https://docs.litellm.ai/docs/providers) model string works.
 
+For models that support configurable reasoning strength, such as some GPT-5 variants, you can set `"reasoning_effort"` on the provider as the default reasoning level. Supported values are `none`, `minimal`, `low`, `medium`, `high`, and `xhigh`, although each model may support only a subset. This is a provider-level default, not a per-query override, and it only takes effect if the underlying model/provider accepts the parameter.
+
+Example:
+
+```json
+{
+  "providers": {
+    "default": {
+      "api_key": "YOUR_OPENAI_API_KEY",
+      "model": "openai/gpt-5",
+      "reasoning_effort": "high"
+    }
+  },
+  "active_provider": "default"
+}
+```
+
 **OpenRouter:**
 ```json
 {

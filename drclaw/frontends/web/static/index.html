@@ -1913,6 +1913,18 @@ body {
               <label for="cfg-provider-model">Model</label>
               <input id="cfg-provider-model" type="text">
             </div>
+            <div class="config-field">
+              <label for="cfg-provider-reasoning-effort">Reasoning Effort</label>
+              <select id="cfg-provider-reasoning-effort">
+                <option value="">Default / unset</option>
+                <option value="none">none</option>
+                <option value="minimal">minimal</option>
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+                <option value="xhigh">xhigh</option>
+              </select>
+            </div>
           </fieldset>
 
           <fieldset class="config-card">
@@ -2197,6 +2209,7 @@ body {
   const cfgProviderApiKey = document.getElementById("cfg-provider-api-key");
   const cfgProviderApiBase = document.getElementById("cfg-provider-api-base");
   const cfgProviderModel = document.getElementById("cfg-provider-model");
+  const cfgProviderReasoningEffort = document.getElementById("cfg-provider-reasoning-effort");
   const cfgAgentMaxIterations = document.getElementById("cfg-agent-max-iterations");
   const cfgAgentMaxTokens = document.getElementById("cfg-agent-max-tokens");
   const cfgAgentTemperature = document.getElementById("cfg-agent-temperature");
@@ -2983,6 +2996,7 @@ body {
     cfgProviderApiKey.value = provider.api_key || "";
     cfgProviderApiBase.value = provider.api_base || "";
     cfgProviderModel.value = provider.model || "";
+    cfgProviderReasoningEffort.value = provider.reasoning_effort || "";
 
     cfgAgentMaxIterations.value = agent.max_iterations == null ? "" : String(agent.max_iterations);
     cfgAgentMaxTokens.value = agent.max_tokens == null ? "" : String(agent.max_tokens);
@@ -3035,6 +3049,7 @@ body {
           api_key: cfgProviderApiKey.value,
           api_base: cfgProviderApiBase.value.trim() || null,
           model: cfgProviderModel.value,
+          reasoning_effort: cfgProviderReasoningEffort.value || null,
         },
       },
       active_provider: activeProvider,

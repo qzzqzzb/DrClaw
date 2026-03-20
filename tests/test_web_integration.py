@@ -1198,6 +1198,7 @@ async def test_publish_to_hub_endpoint_requires_active_project(kernel, adapter):
 
 @pytest.mark.asyncio
 async def test_config_get_endpoint(kernel, adapter):
+    kernel.config.providers[kernel.config.active_provider].reasoning_effort = "medium"
     app = _make_app(kernel, adapter)
     async with TestClient(TestServer(app)) as client:
         resp = await client.get("/api/config")
@@ -1207,6 +1208,7 @@ async def test_config_get_endpoint(kernel, adapter):
             kernel.config.active_provider_config.model
         )
         assert data["active_provider"] == kernel.config.active_provider
+        assert data["providers"][kernel.config.active_provider]["reasoning_effort"] == "medium"
         assert data["agent"]["max_iterations"] == kernel.config.agent.max_iterations
         assert data["daemon"]["web_in_docker"] is False
 
@@ -1216,6 +1218,7 @@ async def test_config_put_endpoint_persists(kernel, adapter):
     app = _make_app(kernel, adapter)
     payload = kernel.config.model_dump(by_alias=True)
     payload["providers"][payload["active_provider"]]["model"] = "openai/gpt-4.1-mini"
+    payload["providers"][payload["active_provider"]]["reasoning_effort"] = "high"
     payload["daemon"]["verbose_chat"] = False
     payload["daemon"]["show_tool_calls"] = False
     payload["daemon"]["web_in_docker"] = True
@@ -1228,7 +1231,11 @@ async def test_config_put_endpoint_persists(kernel, adapter):
         assert data["config"]["providers"][data["config"]["active_provider"]]["model"] == (
             "openai/gpt-4.1-mini"
         )
+        assert data["config"]["providers"][data["config"]["active_provider"]]["reasoning_effort"] == (
+            "high"
+        )
         assert kernel.config.active_provider_config.model == "openai/gpt-4.1-mini"
+        assert kernel.config.active_provider_config.reasoning_effort == "high"
         assert kernel.config.daemon.verbose_chat is False
         assert kernel.config.daemon.show_tool_calls is False
         assert kernel.config.daemon.web_in_docker is True
@@ -1236,6 +1243,7 @@ async def test_config_put_endpoint_persists(kernel, adapter):
     config_path = kernel.config.data_path / "config.json"
     loaded = load_config(config_path)
     assert loaded.active_provider_config.model == "openai/gpt-4.1-mini"
+    assert loaded.active_provider_config.reasoning_effort == "high"
     assert loaded.daemon.verbose_chat is False
     assert loaded.daemon.show_tool_calls is False
     assert loaded.daemon.web_in_docker is True
