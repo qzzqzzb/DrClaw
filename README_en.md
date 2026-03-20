@@ -289,8 +289,13 @@ A single project can now run as one `project manager` plus multiple internal `st
 
 - `proj:<project_id>` remains the only project-facing manager agent and is the only project target used by the `main` assistant
 - `student:<project_id>:<student_id>` agents are internal project workers; they are currently managed by the project manager and do not accept direct `main`-assistant task routing
+- The `main` assistant can now manage student lifecycle for a project: list, create, update, enable/disable, and remove students
 - All students in the same project share `projects/<project_id>/workspace`
 - The manager and each student keep separate `MEMORY.md`, `HISTORY.md`, session history, and SOUL / config state
+- Each student also has a private state directory at `projects/<project_id>/agents/<student_id>/` for memory/history/sessions/private skills
+- Student shell execution now allows both the shared project workspace and that student's private workspace
+- The `main` assistant can now install a local-hub skill into one student's private `skills/` directory without granting it to the manager or other students
+- Student skill resolution order is now `student private skills > project workspace skills > global skills`
 - `/api/agents` and runtime agent listings now distinguish `project_manager` from `project_student`
 - In daemon `--debug` / `--debug-full` mode, student execution summaries are printed to the console and debug JSONL entries now include `agent_id`
 
