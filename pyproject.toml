@@ -1,6 +1,6 @@
 [project]
 name = "drclaw"
-version = "0.2.1"
+version = "0.2.2"
 description = "A lightweight, project-centric AI agent framework for research workflows"
 requires-python = ">=3.11"
 license = {text = "MIT"}
