@@ -260,6 +260,46 @@ async def test_student_project_agent_has_private_memory_dir(
     assert session.session_key == f"student:{project.id}:{student.id}"
 
 
+def test_student_project_agent_loads_private_skills_before_project_and_global(
+    tmp_path: Path, mock_provider: MockProvider
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    project = make_project()
+    student = StudentAgentConfig(id="researcher", label="Researcher")
+    project_dir = tmp_path / "projects" / project.id
+    workspace_skill = project_dir / "workspace" / "skills" / "alpha"
+    private_skill = project_dir / "agents" / student.id / "skills" / "alpha"
+    global_skill = tmp_path / "skills" / "alpha"
+    workspace_skill.mkdir(parents=True, exist_ok=True)
+    private_skill.mkdir(parents=True, exist_ok=True)
+    global_skill.mkdir(parents=True, exist_ok=True)
+    (workspace_skill / "SKILL.md").write_text("# Workspace", encoding="utf-8")
+    (private_skill / "SKILL.md").write_text("# Private", encoding="utf-8")
+    (global_skill / "SKILL.md").write_text("# Global", encoding="utf-8")
+
+    agent = StudentProjectAgent(config, mock_provider, project, student)
+    loader = agent.loop.context_builder.skills_loader
+
+    assert loader is not None
+    assert "# Private" in (loader.load_skill("alpha") or "")
+
+
+def test_project_manager_does_not_load_student_private_skills(
+    tmp_path: Path, mock_provider: MockProvider
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    project = make_project()
+    student_dir = tmp_path / "projects" / project.id / "agents" / "researcher" / "skills" / "secret"
+    student_dir.mkdir(parents=True, exist_ok=True)
+    (student_dir / "SKILL.md").write_text("# Student only", encoding="utf-8")
+
+    agent = ProjectAgent(config, mock_provider, project)
+    loader = agent.loop.context_builder.skills_loader
+
+    assert loader is not None
+    assert loader.load_skill("secret") is None
+
+
 @pytest.mark.asyncio
 async def test_route_to_student_tool_return_warns_against_polling(
     tmp_path: Path, mock_provider: MockProvider

@@ -52,6 +52,14 @@ def test_main_agent_does_not_register_remote_tmux_tools(main_agent: MainAgent) -
     assert "terminate_remote_tmux_session" not in names
 
 
+def test_main_agent_registers_project_student_management_tools(main_agent: MainAgent) -> None:
+    names = set(main_agent.loop.tool_registry.tool_names)
+    assert "list_project_students" in names
+    assert "create_project_student" in names
+    assert "update_project_student" in names
+    assert "remove_project_student" in names
+
+
 @pytest.mark.asyncio
 async def test_main_agent_web_dispatch_applies_zh_language_directive(
     main_agent: MainAgent, mock_provider: MockProvider
@@ -310,8 +318,12 @@ def test_main_agent_has_filesystem_tools(
         "web_fetch",
         "message",
         "list_projects",
+        "list_project_students",
         "create_project",
+        "create_project_student",
+        "update_project_student",
         "remove_project",
+        "remove_project_student",
         "route_to_project",
         "set_env_var",
         "unset_env_var",

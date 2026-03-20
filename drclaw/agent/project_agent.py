@@ -80,6 +80,10 @@ def project_student_state_dir(project_dir: Path, student_id: str) -> Path:
     return project_dir / "agents" / student_id
 
 
+def project_student_skills_dir(project_dir: Path, student_id: str) -> Path:
+    return project_student_state_dir(project_dir, student_id) / "skills"
+
+
 def _build_acpx_guidance(
     config: DrClawConfig,
     workspace_dir: Path,
@@ -276,9 +280,15 @@ class _ProjectScopedAgent:
         def env_provider() -> dict[str, str]:
             return self.env_store.get_effective_env(agent_id)
 
+        extra_skill_dirs: list[tuple[str, Path]] = []
+        student_skills_dir = self.state_dir / "skills"
+        if self.state_dir != self.project_dir:
+            extra_skill_dirs.append(("student_private", ensure_dir(student_skills_dir)))
+
         skills_loader = SkillsLoader(
             workspace=self.workspace_dir,
             global_skills_dir=config.data_path / "skills",
+            extra_skill_dirs=extra_skill_dirs,
             env_provider=env_provider,
         )
         context_builder = ContextBuilder(

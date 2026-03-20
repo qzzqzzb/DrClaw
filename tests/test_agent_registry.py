@@ -319,6 +319,44 @@ async def test_spawn_project_also_starts_enabled_students(
     assert agents[f"student:{project.id}:researcher"].agent_type == "project_student"
 
 
+@pytest.mark.asyncio
+async def test_refresh_project_updates_student_handles(
+    config: DrClawConfig, bus: MessageBus,
+) -> None:
+    provider = MockProvider()
+    registry = AgentRegistry(config, provider, bus)
+    project = make_project()
+    project.student_agents = [StudentAgentConfig(id="researcher", label="Researcher")]
+
+    with _patch_loop_run():
+        registry.spawn_project(project)
+        refreshed = make_project(project.id, project.name)
+        refreshed.student_agents = [StudentAgentConfig(id="coder", label="Coder")]
+        handle = await registry.refresh_project(refreshed)
+
+    assert handle is not None
+    agents = {item.agent_id for item in registry.list_agents()}
+    assert f"proj:{project.id}" in agents
+    assert f"student:{project.id}:researcher" not in agents
+    assert f"student:{project.id}:coder" in agents
+
+
+@pytest.mark.asyncio
+async def test_refresh_project_inactive_project_is_noop(
+    config: DrClawConfig, bus: MessageBus,
+) -> None:
+    provider = MockProvider()
+    registry = AgentRegistry(config, provider, bus)
+    project = make_project()
+    project.student_agents = [StudentAgentConfig(id="researcher", label="Researcher")]
+
+    with _patch_loop_run():
+        handle = await registry.refresh_project(project)
+
+    assert handle is None
+    assert registry.list_agents() == []
+
+
 # ---------------------------------------------------------------------------
 # on_tool_call propagation
 # ---------------------------------------------------------------------------

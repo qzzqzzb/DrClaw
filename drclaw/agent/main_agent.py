@@ -64,10 +64,14 @@ from drclaw.tools.equipment_tools import (
 from drclaw.tools.external_agent_tools import CallExternalAgentTool
 from drclaw.tools.message import MessageTool
 from drclaw.tools.project_tools import (
+    CreateProjectStudentTool,
     CreateProjectTool,
     ListProjectsTool,
+    ListProjectStudentsTool,
     RemoveProjectTool,
+    RemoveProjectStudentTool,
     RouteToProjectTool,
+    UpdateProjectStudentTool,
 )
 from drclaw.tools.registry import ToolRegistry
 from drclaw.utils.helpers import ensure_default_skill_dirs
@@ -94,6 +98,10 @@ def _build_identity(
         "- If a request is to grant a specific student/project access to a local-hub skill, "
         "prefer add_local_hub_skills_to_project.\n"
         "- Use equipment provisioning tools only when the user asks for shared equipment access."
+        "\n\n## Project Student Management\n"
+        "- You can manage student agents under a project with the project student tools.\n"
+        "- Use these tools for project structure changes such as creating, updating, enabling, disabling, or removing student agents.\n"
+        "- Project manager agents should focus on delegating work, not changing the project's student roster."
     )
     projects = project_store.list_projects()
     if not projects:
@@ -131,6 +139,7 @@ class MainAgent:
         debug_logger: DebugLogger | None = None,
         on_project_create: Callable[[Project], Any] | None = None,
         on_project_remove: Callable[[str], Awaitable[Any] | Any] | None = None,
+        on_project_update: Callable[[Project], Awaitable[Any] | Any] | None = None,
         ensure_project_active: Callable[[Project], Awaitable[Any] | Any] | None = None,
         equipment_manager: EquipmentRuntimeManager | None = None,
         sandbox_job_manager: SandboxJobManager | None = None,
@@ -171,6 +180,7 @@ class MainAgent:
         self.memory_store = MemoryStore(data_dir)
         self.session_manager = SessionManager(data_dir / "sessions")
         self._ensure_project_active = ensure_project_active
+        self._on_project_update = on_project_update
 
         def env_provider() -> dict[str, str]:
             return self.env_store.get_effective_env("main")
@@ -209,11 +219,31 @@ class MainAgent:
             )
         )
         registry.register(ListProjectsTool(self.project_store))
+        registry.register(ListProjectStudentsTool(self.project_store))
         registry.register(
             CreateProjectTool(
                 self.project_store,
                 projects_dir=data_dir / "projects",
                 on_create=on_project_create,
+            )
+        )
+        registry.register(
+            CreateProjectStudentTool(
+                self.project_store,
+                projects_dir=data_dir / "projects",
+                on_update=self._on_project_update,
+            )
+        )
+        registry.register(
+            UpdateProjectStudentTool(
+                self.project_store,
+                on_update=self._on_project_update,
+            )
+        )
+        registry.register(
+            RemoveProjectStudentTool(
+                self.project_store,
+                on_update=self._on_project_update,
             )
         )
         registry.register(SetEnvVarTool(self.env_store))

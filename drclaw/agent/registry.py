@@ -136,6 +136,10 @@ class AgentRegistry:
                 p, interactive=True, debug_logger=debug_logger,
             ),
             on_project_remove=self.remove_project_agent,
+            on_project_update=lambda p: self.refresh_project(
+                p,
+                debug_logger=debug_logger,
+            ),
             ensure_project_active=lambda p: self.activate_project(
                 p, interactive=True, debug_logger=debug_logger,
             ),
@@ -393,6 +397,32 @@ class AgentRegistry:
         await self.stop(agent_id, deactivate=False)
         self._handles.pop(agent_id, None)
         return True
+
+    async def refresh_project(
+        self,
+        project: Project,
+        *,
+        debug_logger: DebugLogger | None = None,
+    ) -> AgentHandle | None:
+        """Refresh a project's running manager/student handles after config changes."""
+        agent_id = project_manager_agent_id(project.id)
+        existing = self._handles.get(agent_id)
+        should_refresh = (
+            existing is not None and existing.status == AgentStatus.RUNNING
+        ) or project.id in self._activated_project_ids
+        if not should_refresh:
+            return None
+
+        interactive = bool(
+            existing is not None
+            and existing.loop.max_iterations == self.config.agent.max_iterations
+        )
+        await self.remove_project_agent(project.id)
+        return self.spawn_project(
+            project,
+            interactive=interactive,
+            debug_logger=debug_logger,
+        )
 
     def find_by_project_name(self, name: str) -> AgentHandle | None:
         """Find a running project agent by project name (case-insensitive)."""
