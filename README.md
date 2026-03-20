@@ -27,6 +27,8 @@
 
 [**中文**](./README.md) | [**English**](./README_en.md)
 
+文档入口：[用户手册](./docs/USER_MANUAL.md)
+
 微信群聊邀请二维码：
 
 <p align="center">

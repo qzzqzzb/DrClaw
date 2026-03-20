@@ -1,5 +1,7 @@
 [**中文**](./README_zh.md) | [**English**](./README.md)
 
+Docs: [User Manual (Chinese)](./docs/USER_MANUAL.md)
+
 # DrClaw
 
 <!-- badges -->
