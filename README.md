@@ -456,7 +456,7 @@ drclaw daemon -f web
 </details>
 
 <details>
-<summary>Kimi / Moonshot</summary>
+<summary>Kimi/Moonshot/Kimi coding plan</summary>
 
 推荐直接使用 Moonshot 配置：
 
@@ -482,6 +482,21 @@ drclaw daemon -f web
       "api_key": "YOUR_MOONSHOT_API_KEY",
       "api_base": "https://api.moonshot.cn/v1",
       "model": "openai/kimi-k2.5"
+    }
+  },
+  "active_provider": "default"
+}
+```
+
+如果你使用的是 Kimi Coding Plan，也可以改用下面这组配置：
+
+```json
+{
+  "providers": {
+    "default": {
+      "api_key": "sk-kimi-***",
+      "api_base": "https://api.kimi.com/coding",
+      "model": "anthropic/k2p5"
     }
   },
   "active_provider": "default"
