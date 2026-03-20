@@ -31,7 +31,7 @@ _MAX_ITERATIONS_FINALIZE_NOTICE = (
     "If anything is incomplete, clearly state what is missing."
 )
 _CROSS_AGENT_SOURCE_HEADER_PREFIX = "[Message Source: "
-_AGENT_SOURCE_PREFIXES = ("proj:", "equip:", "claude_code:")
+_AGENT_SOURCE_PREFIXES = ("proj:", "student:", "equip:", "claude_code:")
 _AGENT_SOURCE_EXACT = {"main", "cron"}
 
 
@@ -162,6 +162,9 @@ class AgentLoop:
         *on_new_messages* is called after each iteration with the new messages
         appended during that iteration, enabling incremental session persistence.
         """
+        debug_session_key = (
+            self._active_session.session_key if self._active_session is not None else self.session_key
+        )
         tool_defs = self.tool_registry.get_definitions() or None
         tools_used: list[str] = []
         final_content: str | None = None
@@ -171,10 +174,21 @@ class AgentLoop:
         while iteration < self.max_iterations:
             mark = len(messages)
             if self.debug_logger:
-                self.debug_logger.log_request(iteration, messages, tool_defs)
+                self.debug_logger.log_request(
+                    iteration,
+                    messages,
+                    tool_defs,
+                    agent_id=self.agent_id,
+                    session_key=debug_session_key,
+                )
             response = await self.provider.complete(messages, tools=tool_defs)
             if self.debug_logger:
-                self.debug_logger.log_response(iteration, response)
+                self.debug_logger.log_response(
+                    iteration,
+                    response,
+                    agent_id=self.agent_id,
+                    session_key=debug_session_key,
+                )
             self._record_usage(response)
 
             if response.stop_reason == "error":
@@ -261,7 +275,14 @@ class AgentLoop:
                         logger.exception("Tool execution crashed: {}", tc.name)
                         result = f"Error: tool '{tc.name}' crashed unexpectedly."
                     if self.debug_logger:
-                        self.debug_logger.log_tool_exec(iteration, tc.name, tc.arguments, result)
+                        self.debug_logger.log_tool_exec(
+                            iteration,
+                            tc.name,
+                            tc.arguments,
+                            result,
+                            agent_id=self.agent_id,
+                            session_key=debug_session_key,
+                        )
                     self.context_builder.add_tool_result(messages, tc.id, tc.name, result)
                     tools_used.append(tc.name)
 
@@ -286,12 +307,23 @@ class AgentLoop:
             mark = len(messages)
             messages.append({"role": "system", "content": _MAX_ITERATIONS_FINALIZE_NOTICE})
             if self.debug_logger:
-                self.debug_logger.log_request(iteration, messages, None)
+                self.debug_logger.log_request(
+                    iteration,
+                    messages,
+                    None,
+                    agent_id=self.agent_id,
+                    session_key=debug_session_key,
+                )
 
             final_response = await self.provider.complete(messages, tools=None)
 
             if self.debug_logger:
-                self.debug_logger.log_response(iteration, final_response)
+                self.debug_logger.log_response(
+                    iteration,
+                    final_response,
+                    agent_id=self.agent_id,
+                    session_key=debug_session_key,
+                )
             self._record_usage(final_response)
 
             if final_response.stop_reason == "error":

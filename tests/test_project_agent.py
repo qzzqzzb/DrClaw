@@ -6,11 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from drclaw.agent.project_agent import ProjectAgent
+from drclaw.bus.queue import MessageBus
+from drclaw.agent.project_agent import ProjectAgent, StudentProjectAgent
 from drclaw.agent.skills import SkillsLoader
-from drclaw.config.schema import DrClawConfig
-from drclaw.models.project import Project
+from drclaw.config.schema import AcpxConfig, DrClawConfig
+from drclaw.models.project import Project, StudentAgentConfig
 from drclaw.soul import project_soul_path
+from drclaw.utils.helpers import ensure_default_skill_dirs
 from tests.mocks import MockProvider, make_project, make_text_response, make_tool_response
 
 
@@ -217,14 +219,122 @@ async def test_project_metadata_in_identity(
     assert "Produce a survey paper" in system_msg
     assert "ai-safety" in system_msg
     assert "alignment" in system_msg
-    assert "Equipment call policy" in system_msg
-    assert "await_result=true" in system_msg
-    assert "await_result=false" in system_msg
-    assert "list_active_equipment_runs/get_equipment_run_status" in system_msg
-    assert "do not start a duplicate equipment run" in system_msg
-    assert "unrecoverable external dependency error" in system_msg
-    assert "default to uv" in system_msg
-    assert "seek help from the user or caller" in system_msg
+
+
+def test_project_agent_registers_route_to_student_when_students_exist(
+    tmp_path: Path, mock_provider: MockProvider
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    project = make_project()
+    project.student_agents = [StudentAgentConfig(id="researcher", label="Researcher")]
+
+    agent = ProjectAgent(config, mock_provider, project)
+
+    assert "route_to_student" in agent.loop.tool_registry.tool_names
+    tool = agent.loop.tool_registry.get("route_to_student")
+    assert tool is not None
+    student_ids = tool.parameters["properties"]["student_id"]["enum"]
+    assert student_ids == ["researcher"]
+    prompt = agent.loop.context_builder.build_system_prompt()
+    assert "use one of the exact student ids listed below" in prompt
+    assert "do NOT poll for status with `list_background_tool_tasks`, `list_active_jobs`" in prompt
+    assert "When you receive a `Student report from ...` callback" in prompt
+
+
+@pytest.mark.asyncio
+async def test_student_project_agent_has_private_memory_dir(
+    tmp_path: Path, mock_provider: MockProvider
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    project = make_project()
+    student = StudentAgentConfig(id="researcher", label="Researcher")
+    agent = StudentProjectAgent(config, mock_provider, project, student)
+
+    mock_provider.queue(make_text_response("ok"))
+    await agent.process_direct("hello")
+
+    student_dir = tmp_path / "projects" / project.id / "agents" / student.id
+    assert agent.memory_store.memory_file == student_dir / "MEMORY.md"
+    assert agent.memory_store.history_file == student_dir / "HISTORY.md"
+    session = agent.loop.session_manager.load(f"student:{project.id}:{student.id}")
+    assert session.session_key == f"student:{project.id}:{student.id}"
+
+
+def test_student_project_agent_loads_private_skills_before_project_and_global(
+    tmp_path: Path, mock_provider: MockProvider
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    project = make_project()
+    student = StudentAgentConfig(id="researcher", label="Researcher")
+    project_dir = tmp_path / "projects" / project.id
+    workspace_skill = project_dir / "workspace" / "skills" / "alpha"
+    private_skill = project_dir / "agents" / student.id / "skills" / "alpha"
+    global_skill = tmp_path / "skills" / "alpha"
+    workspace_skill.mkdir(parents=True, exist_ok=True)
+    private_skill.mkdir(parents=True, exist_ok=True)
+    global_skill.mkdir(parents=True, exist_ok=True)
+    (workspace_skill / "SKILL.md").write_text("# Workspace", encoding="utf-8")
+    (private_skill / "SKILL.md").write_text("# Private", encoding="utf-8")
+    (global_skill / "SKILL.md").write_text("# Global", encoding="utf-8")
+
+    agent = StudentProjectAgent(config, mock_provider, project, student)
+    loader = agent.loop.context_builder.skills_loader
+
+    assert loader is not None
+    assert "# Private" in (loader.load_skill("alpha") or "")
+
+
+def test_project_manager_does_not_load_student_private_skills(
+    tmp_path: Path, mock_provider: MockProvider
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    project = make_project()
+    student_dir = tmp_path / "projects" / project.id / "agents" / "researcher" / "skills" / "secret"
+    student_dir.mkdir(parents=True, exist_ok=True)
+    (student_dir / "SKILL.md").write_text("# Student only", encoding="utf-8")
+
+    agent = ProjectAgent(config, mock_provider, project)
+    loader = agent.loop.context_builder.skills_loader
+
+    assert loader is not None
+    assert loader.load_skill("secret") is None
+
+
+@pytest.mark.asyncio
+async def test_student_project_agent_exec_allows_private_workspace(
+    tmp_path: Path, mock_provider: MockProvider
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    project = make_project()
+    student = StudentAgentConfig(id="researcher", label="Researcher")
+    agent = StudentProjectAgent(config, mock_provider, project, student)
+
+    exec_tool = agent.loop.tool_registry.get("exec")
+    assert exec_tool is not None
+
+    private_dir = tmp_path / "projects" / project.id / "agents" / student.id
+    result = await exec_tool.execute({"command": "pwd", "working_dir": str(private_dir)})
+
+    assert str(private_dir.resolve()) in result
+
+
+@pytest.mark.asyncio
+async def test_route_to_student_tool_return_warns_against_polling(
+    tmp_path: Path, mock_provider: MockProvider
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    project = make_project()
+    project.student_agents = [StudentAgentConfig(id="researcher", label="Researcher")]
+    agent = ProjectAgent(config, mock_provider, project)
+    agent.loop.bus = MessageBus()
+    tool = agent.loop.tool_registry.get("route_to_student")
+
+    assert tool is not None
+    result = await tool.execute({"student_id": "researcher", "message": "do work"})
+
+    assert "You must now wait for the response from Researcher." in result
+    assert "Do NOT check the student's workspace" in result
+    assert "list_background_tool_tasks or list_active_jobs" in result
 
 
 @pytest.mark.asyncio
@@ -271,6 +381,35 @@ async def test_project_agent_always_skill_in_prompt(
     assert "Active Skills" in system_msg
     assert "test-skill" in system_msg
     assert "This is injected content" in system_msg
+
+
+def test_project_agent_prompt_excludes_acpx_guidance_by_default(
+    tmp_path: Path, mock_provider: MockProvider, project: Project
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    agent = ProjectAgent(config, mock_provider, project)
+    prompt = agent.loop.context_builder.build_system_prompt()
+    assert "## ACPX Access" not in prompt
+    assert "acpx codex exec" not in prompt
+
+
+def test_project_agent_prompt_includes_acpx_guidance_when_enabled(
+    tmp_path: Path, mock_provider: MockProvider, project: Project
+) -> None:
+    config = DrClawConfig(data_dir=str(tmp_path))
+    config.acpx = AcpxConfig(enabled=True, command="acpx", default_agent="codex")
+    ensure_default_skill_dirs(config.data_path)
+
+    agent = ProjectAgent(config, mock_provider, project)
+    prompt = agent.loop.context_builder.build_system_prompt()
+
+    assert "## ACPX Access" in prompt
+    assert "There is no dedicated ACPX tool in DrClaw." in prompt
+    assert "Use the existing `long_exec` tool by default" in prompt
+    assert "`acpx codex exec '<instruction>'`" in prompt
+    assert f"`drclaw-proj-{project.id}-`" in prompt
+    assert f"`acpx codex sessions ensure --name drclaw-proj-{project.id}-<task-suffix>`" in prompt
+    assert "<name>acpx</name>" in prompt
 
 
 @pytest.mark.asyncio

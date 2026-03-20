@@ -186,6 +186,23 @@ More [beta features](#Beta) here.
 
 After install, edit `~/.drclaw/config.json` to set your LLM provider. The current config format is `providers + active_provider`, and any [litellm-compatible](https://docs.litellm.ai/docs/providers) model string works.
 
+For models that support configurable reasoning strength, such as some GPT-5 variants, you can set `"reasoning_effort"` on the provider as the default reasoning level. Supported values are `none`, `minimal`, `low`, `medium`, `high`, and `xhigh`, although each model may support only a subset. This is a provider-level default, not a per-query override, and it only takes effect if the underlying model/provider accepts the parameter.
+
+Example:
+
+```json
+{
+  "providers": {
+    "default": {
+      "api_key": "YOUR_OPENAI_API_KEY",
+      "model": "openai/gpt-5",
+      "reasoning_effort": "high"
+    }
+  },
+  "active_provider": "default"
+}
+```
+
 **OpenRouter:**
 ```json
 {
@@ -283,6 +300,22 @@ Note: this switch only affects the Web UI. External-agent callbacks still assume
 
 We have a list of beta features. These features integrated in the main version, but not fully tested. If you want to use them, be careful. 
 
+### Multi-Agent Per Project
+
+A single project can now run as one `project manager` plus multiple internal `student agents`.
+
+- `proj:<project_id>` remains the only project-facing manager agent and is the only project target used by the `main` assistant
+- `student:<project_id>:<student_id>` agents are internal project workers; they are currently managed by the project manager and do not accept direct `main`-assistant task routing
+- The `main` assistant can now manage student lifecycle for a project: list, create, update, enable/disable, and remove students
+- All students in the same project share `projects/<project_id>/workspace`
+- The manager and each student keep separate `MEMORY.md`, `HISTORY.md`, session history, and SOUL / config state
+- Each student also has a private state directory at `projects/<project_id>/agents/<student_id>/` for memory/history/sessions/private skills
+- Student shell execution now allows both the shared project workspace and that student's private workspace
+- The `main` assistant can now install a local-hub skill into one student's private `skills/` directory without granting it to the manager or other students
+- Student skill resolution order is now `student private skills > project workspace skills > global skills`
+- `/api/agents` and runtime agent listings now distinguish `project_manager` from `project_student`
+- In daemon `--debug` / `--debug-full` mode, student execution summaries are printed to the console and debug JSONL entries now include `agent_id`
+
 ### Docker Sandbox Jobs
 
 Student agents can now use `create_job` to start a Docker-backed sandbox job for high-risk shell work.
@@ -361,6 +394,97 @@ Notes:
 - v1 is text-only (`files` are not supported for external agents).
 - v1 assumes callback reachability on same host (`127.0.0.1`).
 - v1 callback auth is intentionally omitted for prototype use in trusted environments.
+
+### Use Codex from Project Agents via ACPX
+
+DrClaw can now let `project agents` use Codex by executing the standard `acpx` CLI through the existing `exec` / `long_exec` tools. The current implementation does **not** add a dedicated ACPX tool and does **not** turn ACPX into a provider. Instead, agents receive ACPX guidance plus a built-in skill, then run shell commands themselves.
+
+Prerequisites:
+- `acpx` is installed globally on the host
+- `acpx codex ...` already works in the host terminal
+
+#### 1. Seed the built-in ACPX skill
+
+For a fresh install:
+
+```bash
+drclaw onboard
+```
+
+For an older data directory, running `drclaw onboard` again is also fine; it will backfill missing built-in skills into `~/.drclaw/skills/`. After that you should see:
+
+```bash
+ls ~/.drclaw/skills/acpx
+```
+
+#### 2. Configure ACPX
+
+Add this to `~/.drclaw/config.json`:
+
+```json
+{
+  "acpx": {
+    "enabled": true,
+    "command": "acpx",
+    "default_agent": "codex",
+    "prefer_long_exec": true
+  }
+}
+```
+
+Meaning:
+- `enabled=true`: inject ACPX usage guidance into project agents
+- `command`: ACPX executable name to run
+- `default_agent`: currently `codex`
+- `prefer_long_exec=true`: prefer `long_exec` to avoid the normal 60-second timeout
+
+#### 3. How to test it
+
+First verify ACPX itself on the host:
+
+```bash
+acpx --help
+acpx codex exec 'Reply with exactly: acpx-ok'
+```
+
+Then create a test project and open project chat:
+
+```bash
+drclaw projects create "acpx-test"
+drclaw chat --project acpx-test
+```
+
+In the project chat, send:
+
+```text
+Do not answer directly. Use long_exec to call acpx codex exec and make it output exactly: drclaw-acpx-ok. Show me both the command and the result.
+```
+
+To test a persistent session, send:
+
+```text
+Use long_exec to run these commands:
+1. acpx codex sessions ensure --name drclaw-proj-<current-project-id>-smoke
+2. acpx codex -s drclaw-proj-<current-project-id>-smoke 'Reply with exactly: session-ok'
+3. acpx codex -s drclaw-proj-<current-project-id>-smoke status
+4. acpx codex sessions close drclaw-proj-<current-project-id>-smoke
+Return the command and result for each step.
+```
+
+Success criteria:
+- the agent explicitly calls `exec` or `long_exec`
+- it actually runs `acpx codex ...`
+- the returned answer is the real ACPX / Codex output, not a fabricated direct reply from the agent
+
+#### 4. Session naming and cleanup
+
+- `acpx codex exec ...` is one-shot and does not require session cleanup
+- persistent sessions created by project agents must use the prefix `drclaw-proj-<project-id>-`
+- persistent ACPX sessions are not closed automatically when DrClaw exits; close them explicitly when the task is done:
+
+```bash
+acpx codex sessions close drclaw-proj-<project-id>-<task-suffix>
+```
 
 ## Usage
 

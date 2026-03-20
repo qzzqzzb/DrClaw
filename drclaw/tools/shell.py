@@ -37,6 +37,7 @@ class ExecTool(Tool):
         self,
         timeout: int = 60,
         working_dir: Path | None = None,
+        allowed_working_dirs: list[Path] | None = None,
         deny_patterns: list[str] | None = None,
         allow_patterns: list[str] | None = None,
         restrict_to_workspace: bool = False,
@@ -45,6 +46,7 @@ class ExecTool(Tool):
     ):
         self.timeout = timeout
         self.working_dir = working_dir
+        self.allowed_working_dirs = list(allowed_working_dirs or [])
         self.deny_patterns = (
             deny_patterns if deny_patterns is not None else list(self._DEFAULT_DENY)
         )
@@ -148,17 +150,16 @@ class ExecTool(Tool):
         if not self.restrict_to_workspace:
             return working_dir or default_cwd, None
 
-        workspace_root = Path(default_cwd).resolve()
+        allowed_roots = self._allowed_roots(default_cwd)
+        primary_root = allowed_roots[0]
         if working_dir is None:
-            return workspace_root, None
+            return primary_root, None
 
         requested = Path(working_dir).expanduser()
         if not requested.is_absolute():
-            requested = workspace_root / requested
+            requested = primary_root / requested
         resolved = requested.resolve()
-        try:
-            resolved.relative_to(workspace_root)
-        except ValueError:
+        if not self._is_within_allowed_roots(resolved, allowed_roots):
             return "", "Error: Command blocked by safety guard (working dir outside workspace)"
         return resolved, None
 
@@ -188,7 +189,7 @@ class ExecTool(Tool):
             if "..\\" in command or "../" in command:
                 return "Error: Command blocked by safety guard (path traversal detected)"
 
-            cwd_path = Path(cwd).resolve()
+            allowed_roots = self._allowed_roots(cwd)
             # Path extraction operates on the original command (not lowered) because
             # filesystem paths are case-sensitive on POSIX and need their original case.
             for raw in self._extract_absolute_paths(command):
@@ -196,10 +197,29 @@ class ExecTool(Tool):
                     p = Path(raw.strip()).resolve()
                 except Exception:
                     continue
-                if p.is_absolute() and p not in _SAFE_DEV_PATHS and cwd_path not in p.parents and p != cwd_path:
+                if (
+                    p.is_absolute()
+                    and p not in _SAFE_DEV_PATHS
+                    and not self._is_within_allowed_roots(p, allowed_roots)
+                ):
                     return "Error: Command blocked by safety guard (path outside working dir)"
 
         return None
+
+    def _allowed_roots(self, default_cwd: str | Path) -> list[Path]:
+        roots = [Path(default_cwd).resolve()]
+        for root in self.allowed_working_dirs:
+            resolved = Path(root).resolve()
+            if resolved not in roots:
+                roots.append(resolved)
+        return roots
+
+    @staticmethod
+    def _is_within_allowed_roots(path: Path, allowed_roots: list[Path]) -> bool:
+        for root in allowed_roots:
+            if path == root or root in path.parents:
+                return True
+        return False
 
     @staticmethod
     def _extract_absolute_paths(command: str) -> list[str]:

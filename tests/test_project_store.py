@@ -11,6 +11,7 @@ from drclaw.models.project import (
     CorruptProjectStoreError,
     JsonProjectStore,
     ProjectStore,
+    StudentAgentConfig,
 )
 
 
@@ -153,6 +154,24 @@ def test_project_goals_tags_roundtrip(tmp_data_dir: Path):
     assert loaded is not None
     assert loaded.goals == "Find the answer to everything"
     assert loaded.tags == ["ml", "nlp", "transformers"]
+
+
+def test_project_student_agents_roundtrip(tmp_data_dir: Path):
+    store = JsonProjectStore(tmp_data_dir)
+    p = store.create_project("MultiAgent", "desc")
+    p.student_agents = [
+        StudentAgentConfig(id="researcher", label="Researcher", soul="# Soul"),
+        StudentAgentConfig(id="coder", label="Coder", enabled=False),
+    ]
+    store.update_project(p)
+
+    store2 = JsonProjectStore(tmp_data_dir)
+    loaded = store2.get_project(p.id)
+    assert loaded is not None
+    assert [student.id for student in loaded.student_agents] == ["researcher", "coder"]
+    assert loaded.student_agents[0].label == "Researcher"
+    assert loaded.student_agents[0].soul == "# Soul"
+    assert loaded.student_agents[1].enabled is False
 
 
 def test_backward_compat_existing_projects_json(tmp_data_dir: Path):

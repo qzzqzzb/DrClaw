@@ -6,7 +6,7 @@ import asyncio
 import importlib
 import signal
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from rich.console import Console
 
@@ -38,6 +38,7 @@ class Daemon:
         self._kernel: Kernel | None = None
         self._frontends: list[FrontendAdapter] = []
         self._monitor_tasks: list[asyncio.Task[None]] = []
+        self._debug_listener_installed = False
 
     async def run(self) -> None:
         self._kernel = Kernel.boot(
@@ -62,6 +63,7 @@ class Daemon:
             names = ", ".join(fe.adapter_id for fe in self._frontends)
             console.print(f"Frontends loaded: {names}")
 
+        self._install_debug_listener()
         self._start_bus_monitor()
         await self._kernel.cron.start()
         cron_status = self._kernel.cron.status()
@@ -83,6 +85,7 @@ class Daemon:
     async def shutdown(self) -> None:
         if self._kernel is not None:
             self._kernel.cron.stop()
+        self._remove_debug_listener()
         for t in self._monitor_tasks:
             t.cancel()
         for fe in reversed(self._frontends):
@@ -128,6 +131,18 @@ class Daemon:
 
     # -- Bus monitor --------------------------------------------------------
 
+    def _install_debug_listener(self) -> None:
+        if self._debug_logger is None or self._debug_listener_installed:
+            return
+        self._debug_logger.add_listener(self._handle_debug_event)
+        self._debug_listener_installed = True
+
+    def _remove_debug_listener(self) -> None:
+        if self._debug_logger is None or not self._debug_listener_installed:
+            return
+        self._debug_logger.remove_listener(self._handle_debug_event)
+        self._debug_listener_installed = False
+
     def _start_bus_monitor(self) -> None:
         assert self._kernel is not None
         bus = self._kernel.bus
@@ -151,6 +166,50 @@ class Daemon:
         if msg.channel == "system":
             return msg.topic or msg.chat_id
         return f"{msg.channel}:{msg.chat_id}"
+
+    @staticmethod
+    def _preview_text(value: object, *, limit: int = 160) -> str:
+        text = str(value).replace("\n", "\\n")
+        if len(text) > limit:
+            return text[:limit] + "..."
+        return text
+
+    def _handle_debug_event(self, entry: dict[str, Any]) -> None:
+        agent_id_raw = entry.get("agent_id")
+        agent_id = agent_id_raw.strip() if isinstance(agent_id_raw, str) else ""
+        if not agent_id.startswith("student:"):
+            return
+
+        event_type_raw = entry.get("type")
+        event_type = event_type_raw.strip() if isinstance(event_type_raw, str) else ""
+        if event_type == "tool_exec":
+            tool_name_raw = entry.get("tool_name")
+            tool_name = tool_name_raw.strip() if isinstance(tool_name_raw, str) else "tool"
+            preview = self._preview_text(entry.get("result", ""))
+            console.print(
+                f"[dim]{self._ts()}[/dim] "
+                f"[magenta]STUDENT[/magenta] [bold]{agent_id}[/bold] "
+                f"[yellow]{tool_name}[/yellow]  {preview}"
+            )
+            return
+
+        if event_type != "llm_response":
+            return
+
+        tool_calls = entry.get("tool_calls")
+        if isinstance(tool_calls, list) and tool_calls:
+            return
+
+        content_raw = entry.get("content")
+        content = content_raw.strip() if isinstance(content_raw, str) else ""
+        if not content:
+            return
+
+        console.print(
+            f"[dim]{self._ts()}[/dim] "
+            f"[magenta]STUDENT[/magenta] [bold]{agent_id}[/bold] "
+            f"[green]LLM[/green]  {self._preview_text(content)}"
+        )
 
     async def _monitor_inbound(
         self, q: asyncio.Queue[InboundMessage],

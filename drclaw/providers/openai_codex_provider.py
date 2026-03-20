@@ -38,6 +38,7 @@ class OpenAICodexProvider(LLMProvider):
         temperature: float = _AGENT_DEFAULTS.temperature,
     ) -> None:
         self._model = config.model
+        self._reasoning_effort = config.reasoning_effort
         self._max_tokens = max_tokens
         self._temperature = temperature
 
@@ -66,6 +67,8 @@ class OpenAICodexProvider(LLMProvider):
             "tool_choice": "auto",
             "parallel_tool_calls": True,
         }
+        if self._reasoning_effort:
+            body["reasoning"] = {"effort": self._reasoning_effort}
 
         if tools:
             body["tools"] = _convert_tools(tools)

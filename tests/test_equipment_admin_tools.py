@@ -5,12 +5,13 @@ from __future__ import annotations
 from pathlib import Path
 
 from drclaw.equipment.prototypes import EquipmentPrototypeStore
-from drclaw.models.project import JsonProjectStore
+from drclaw.models.project import JsonProjectStore, StudentAgentConfig
 from drclaw.skills.local_hub import LocalSkillHubStore
 from drclaw.tools.equipment_admin_tools import (
     AddEquipmentTool,
     AddLocalHubSkillsToEquipmentTool,
     AddLocalHubSkillsToProjectTool,
+    AddLocalHubSkillsToProjectStudentTool,
     ImportSkillToLocalHubTool,
     ListEquipmentsTool,
     ListLocalSkillHubCategoriesTool,
@@ -234,6 +235,136 @@ class TestLocalSkillHubTools:
 
         assert result.startswith("Error:")
         assert "project 'missing' not found" in result
+
+    async def test_add_local_hub_skills_to_project_student(self, tmp_path: Path) -> None:
+        data_dir = tmp_path / "drclaw_data"
+        project_store = JsonProjectStore(data_dir)
+        project = project_store.create_project("Ada")
+        project.student_agents = [StudentAgentConfig(id="reader", label="Reader")]
+        project_store.update_project(project)
+        hub = LocalSkillHubStore(data_dir / "local-skill-hub")
+        source = tmp_path / "source-skill"
+        source.mkdir(parents=True)
+        (source / "SKILL.md").write_text("---\nname: summarize\n---\n# Summarize", encoding="utf-8")
+        hub.import_skill(source, category="writing", skill_name="summarize")
+        tool = AddLocalHubSkillsToProjectStudentTool(
+            project_store=project_store,
+            projects_dir=data_dir / "projects",
+            local_skill_hub=hub,
+        )
+
+        result = await tool.execute(
+            {
+                "project_id": project.id,
+                "student_id": "reader",
+                "skill_names": ["writing/summarize"],
+            }
+        )
+
+        assert "Added 1 local hub skill(s)" in result
+        assert "writing/summarize->summarize" in result
+        assert (
+            data_dir
+            / "projects"
+            / project.id
+            / "agents"
+            / "reader"
+            / "skills"
+            / "summarize"
+            / "SKILL.md"
+        ).is_file()
+
+    async def test_add_local_hub_skills_to_project_student_missing_student(
+        self, tmp_path: Path
+    ) -> None:
+        data_dir = tmp_path / "drclaw_data"
+        project_store = JsonProjectStore(data_dir)
+        project = project_store.create_project("Ada")
+        project.student_agents = [StudentAgentConfig(id="reader", label="Reader")]
+        project_store.update_project(project)
+        hub = LocalSkillHubStore(data_dir / "local-skill-hub")
+        source = tmp_path / "source-skill"
+        source.mkdir(parents=True)
+        (source / "SKILL.md").write_text("---\nname: summarize\n---\n# Summarize", encoding="utf-8")
+        hub.import_skill(source, category="writing", skill_name="summarize")
+        tool = AddLocalHubSkillsToProjectStudentTool(
+            project_store=project_store,
+            projects_dir=data_dir / "projects",
+            local_skill_hub=hub,
+        )
+
+        result = await tool.execute(
+            {
+                "project_id": project.id,
+                "student_id": "missing",
+                "skill_names": ["writing/summarize"],
+            }
+        )
+
+        assert result.startswith("Error:")
+        assert "student 'missing' not found" in result
+
+    async def test_add_local_hub_skills_to_project_student_overwrite(
+        self, tmp_path: Path
+    ) -> None:
+        data_dir = tmp_path / "drclaw_data"
+        project_store = JsonProjectStore(data_dir)
+        project = project_store.create_project("Ada")
+        project.student_agents = [StudentAgentConfig(id="reader", label="Reader", enabled=False)]
+        project_store.update_project(project)
+        hub = LocalSkillHubStore(data_dir / "local-skill-hub")
+        source_v1 = tmp_path / "source-skill-v1"
+        source_v2 = tmp_path / "source-skill-v2"
+        source_v1.mkdir(parents=True)
+        source_v2.mkdir(parents=True)
+        (source_v1 / "SKILL.md").write_text("---\nname: summarize\n---\n# V1", encoding="utf-8")
+        (source_v2 / "SKILL.md").write_text("---\nname: summarize\n---\n# V2", encoding="utf-8")
+        hub.import_skill(source_v1, category="writing", skill_name="summarize")
+        tool = AddLocalHubSkillsToProjectStudentTool(
+            project_store=project_store,
+            projects_dir=data_dir / "projects",
+            local_skill_hub=hub,
+        )
+
+        first = await tool.execute(
+            {
+                "project_id": project.id,
+                "student_id": "reader",
+                "skill_names": ["writing/summarize"],
+            }
+        )
+        assert "Added 1 local hub skill(s)" in first
+
+        result = await tool.execute(
+            {
+                "project_id": project.id,
+                "student_id": "reader",
+                "skill_names": ["writing/summarize"],
+            }
+        )
+        assert result.startswith("Error:")
+        assert "student already has private skill directories" in result
+
+        hub.import_skill(source_v2, category="writing", skill_name="summarize", overwrite=True)
+        overwritten = await tool.execute(
+            {
+                "project_id": project.id,
+                "student_id": "reader",
+                "skill_names": ["writing/summarize"],
+                "overwrite": True,
+            }
+        )
+        assert "Added 1 local hub skill(s)" in overwritten
+        assert (
+            data_dir
+            / "projects"
+            / project.id
+            / "agents"
+            / "reader"
+            / "skills"
+            / "summarize"
+            / "SKILL.md"
+        ).read_text(encoding="utf-8") == "---\nname: summarize\n---\n# V2"
 
     async def test_set_and_list_local_hub_category_metadata(self, tmp_path: Path) -> None:
         hub = LocalSkillHubStore(tmp_path / "local-skill-hub")

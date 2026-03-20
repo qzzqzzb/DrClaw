@@ -26,7 +26,10 @@ describe("chatStore", () => {
   })
 
   it("setAgents replaces agent list", () => {
-    const agents = [makeAgent("main", "Assistant Agent"), makeAgent("p1", "Student 1", "student")]
+    const agents = [
+      makeAgent("main", "Assistant Agent"),
+      makeAgent("p1", "Student 1", "project_manager"),
+    ]
     useChatStore.getState().setAgents(agents)
     expect(useChatStore.getState().agents).toEqual(agents)
 

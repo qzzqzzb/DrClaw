@@ -994,6 +994,8 @@ async def test_debug_logger_records_loop(
     assert "session_end" in types
 
     resp = next(e for e in entries if e["type"] == "llm_response")
+    assert resp["agent_id"] == "main"
+    assert resp["session_key"] == "cli:test"
     assert resp["content"] == "Hi!"
 
 
@@ -1027,6 +1029,8 @@ async def test_debug_logger_records_tool_calls(
     assert "tool_exec" in types
 
     te = next(e for e in entries if e["type"] == "tool_exec")
+    assert te["agent_id"] == "main"
+    assert te["session_key"] == "cli:test"
     assert te["tool_name"] == "echo"
     assert te["arguments"] == {"text": "ping"}
     assert te["result"] == "ping"

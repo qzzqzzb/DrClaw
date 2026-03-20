@@ -6,6 +6,7 @@ import pytest
 
 from drclaw.config.loader import ConfigLoadError, load_config, load_config_strict, save_config
 from drclaw.config.schema import (
+    AcpxConfig,
     AgentConfig,
     DaemonConfig,
     DrClawConfig,
@@ -28,6 +29,7 @@ def test_config_defaults():
     assert cfg.active_provider_config.model == "anthropic/claude-sonnet-4-5"
     assert cfg.active_provider_config.api_key == ""
     assert cfg.active_provider_config.api_base is None
+    assert cfg.active_provider_config.reasoning_effort is None
     assert cfg.agent.max_iterations == 40
     assert cfg.agent.max_tokens == 8192
     assert cfg.agent.temperature == 0.1
@@ -45,6 +47,7 @@ def test_config_defaults():
     assert cfg.tools.web.serper.endpoint == "https://google.serper.dev/search"
     assert cfg.tools.web.serper.max_results == 5
     assert cfg.claude_code.enabled is False
+    assert cfg.acpx == AcpxConfig()
     assert cfg.env.global_ == {}
     assert cfg.env.scoped == {}
     assert cfg.external_agents == []
@@ -59,22 +62,33 @@ def test_config_data_path_expands_tilde():
 def test_config_save_load_roundtrip(tmp_data_dir: Path):
     path = tmp_data_dir / "config.json"
     cfg = DrClawConfig(
-        providers={"default": ProviderConfig(api_key="sk-test", model="openai/gpt-4o")},
+        providers={
+            "default": ProviderConfig(
+                api_key="sk-test",
+                model="openai/gpt-4o",
+                reasoning_effort="medium",
+            )
+        },
         active_provider="default",
         agent=AgentConfig(
             max_iterations=20,
             temperature=0.5,
             tool_detach_timeout_seconds=30,
         ),
+        acpx=AcpxConfig(enabled=True, command="acpx", default_agent="codex"),
         data_dir="/tmp/drclaw",
     )
     save_config(cfg, path)
     loaded = load_config(path)
     assert loaded.active_provider_config.api_key == "sk-test"
     assert loaded.active_provider_config.model == "openai/gpt-4o"
+    assert loaded.active_provider_config.reasoning_effort == "medium"
     assert loaded.agent.max_iterations == 20
     assert loaded.agent.temperature == 0.5
     assert loaded.agent.tool_detach_timeout_seconds == 30
+    assert loaded.acpx.enabled is True
+    assert loaded.acpx.command == "acpx"
+    assert loaded.acpx.default_agent == "codex"
     assert loaded.data_dir == "/tmp/drclaw"
 
 
@@ -89,7 +103,11 @@ def test_multi_provider_roundtrip(tmp_data_dir: Path):
     cfg = DrClawConfig(
         providers={
             "anthropic": ProviderConfig(api_key="sk-ant", model="anthropic/claude-sonnet-4-5"),
-            "openai": ProviderConfig(api_key="sk-oai", model="openai/gpt-4o"),
+            "openai": ProviderConfig(
+                api_key="sk-oai",
+                model="openai/gpt-4o",
+                reasoning_effort="high",
+            ),
         },
         active_provider="openai",
     )
@@ -97,8 +115,19 @@ def test_multi_provider_roundtrip(tmp_data_dir: Path):
     loaded = load_config(path)
     assert loaded.active_provider == "openai"
     assert loaded.active_provider_config.model == "openai/gpt-4o"
+    assert loaded.active_provider_config.reasoning_effort == "high"
     assert loaded.providers["anthropic"].api_key == "sk-ant"
     assert loaded.providers["openai"].api_key == "sk-oai"
+
+
+def test_provider_config_rejects_invalid_reasoning_effort():
+    with pytest.raises(ValueError, match="reasoning_effort"):
+        ProviderConfig(model="openai/gpt-4o", reasoning_effort="turbo")
+
+
+def test_provider_config_accepts_minimal_reasoning_effort():
+    cfg = ProviderConfig(model="openai/gpt-5", reasoning_effort="minimal")
+    assert cfg.reasoning_effort == "minimal"
 
 
 def test_active_provider_config_raises_when_missing():

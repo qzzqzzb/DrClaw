@@ -11,7 +11,7 @@ import pytest
 from drclaw.agent.registry import AgentRegistry, AgentStatus
 from drclaw.bus.queue import MessageBus
 from drclaw.config.schema import DrClawConfig
-from drclaw.models.project import JsonProjectStore
+from drclaw.models.project import JsonProjectStore, StudentAgentConfig
 from tests.mocks import MockProvider, make_project
 
 
@@ -98,7 +98,7 @@ async def test_spawn_project(config: DrClawConfig, bus: MessageBus) -> None:
         handle = registry.spawn_project(project)
 
     assert handle.agent_id == f"proj:{project.id}"
-    assert handle.agent_type == "project"
+    assert handle.agent_type == "project_manager"
     assert handle.label == project.name
     assert handle.project is project
     assert registry.get(f"proj:{project.id}") is handle
@@ -295,6 +295,66 @@ async def test_bus_topics_created(config: DrClawConfig, bus: MessageBus) -> None
 
     assert "main" in bus._topics
     assert f"proj:{project.id}" in bus._topics
+
+
+@pytest.mark.asyncio
+async def test_spawn_project_also_starts_enabled_students(
+    config: DrClawConfig, bus: MessageBus,
+) -> None:
+    provider = MockProvider()
+    registry = AgentRegistry(config, provider, bus)
+    project = make_project()
+    project.student_agents = [
+        StudentAgentConfig(id="researcher", label="Researcher"),
+        StudentAgentConfig(id="disabled", label="Disabled", enabled=False),
+    ]
+
+    with _patch_loop_run():
+        registry.spawn_project(project)
+
+    agents = {handle.agent_id: handle for handle in registry.list_agents()}
+    assert f"proj:{project.id}" in agents
+    assert f"student:{project.id}:researcher" in agents
+    assert f"student:{project.id}:disabled" not in agents
+    assert agents[f"student:{project.id}:researcher"].agent_type == "project_student"
+
+
+@pytest.mark.asyncio
+async def test_refresh_project_updates_student_handles(
+    config: DrClawConfig, bus: MessageBus,
+) -> None:
+    provider = MockProvider()
+    registry = AgentRegistry(config, provider, bus)
+    project = make_project()
+    project.student_agents = [StudentAgentConfig(id="researcher", label="Researcher")]
+
+    with _patch_loop_run():
+        registry.spawn_project(project)
+        refreshed = make_project(project.id, project.name)
+        refreshed.student_agents = [StudentAgentConfig(id="coder", label="Coder")]
+        handle = await registry.refresh_project(refreshed)
+
+    assert handle is not None
+    agents = {item.agent_id for item in registry.list_agents()}
+    assert f"proj:{project.id}" in agents
+    assert f"student:{project.id}:researcher" not in agents
+    assert f"student:{project.id}:coder" in agents
+
+
+@pytest.mark.asyncio
+async def test_refresh_project_inactive_project_is_noop(
+    config: DrClawConfig, bus: MessageBus,
+) -> None:
+    provider = MockProvider()
+    registry = AgentRegistry(config, provider, bus)
+    project = make_project()
+    project.student_agents = [StudentAgentConfig(id="researcher", label="Researcher")]
+
+    with _patch_loop_run():
+        handle = await registry.refresh_project(project)
+
+    assert handle is None
+    assert registry.list_agents() == []
 
 
 # ---------------------------------------------------------------------------

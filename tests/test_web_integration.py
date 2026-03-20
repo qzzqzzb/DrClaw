@@ -42,7 +42,7 @@ from drclaw.frontends.web.routes import (
     handle_upload_skill,
     handle_ws,
 )
-from drclaw.models.project import Project
+from drclaw.models.project import Project, StudentAgentConfig
 from drclaw.session.manager import SessionManager
 
 
@@ -133,6 +133,7 @@ async def test_index_returns_html(kernel, adapter):
         assert 'data-route="#/monitor"' not in text
         assert 'id="team-workspace"' in text
         assert 'id="team-chat-panel"' in text
+        assert 'id="team-chat-resizer"' in text
         assert 'id="floating-chat-publish"' in text
         assert 'id="add-agent-btn"' in text
         assert 'id="add-agent-from-scratch"' in text
@@ -280,6 +281,7 @@ async def test_agents_endpoint(kernel, adapter):
         assert data[0]["role"] == "Main orchestrator agent"
         assert data[0]["type"] == "assistant"
         assert data[0]["status"] == "idle"
+        assert data[0]["project_id"] is None
 
 
 @pytest.mark.asyncio
@@ -311,7 +313,7 @@ async def test_agents_endpoint_zh_locale_uses_display_name(kernel, adapter):
         assert main["display_role"] == "主控协调智能体"
         assert idle["name"] == "Template Project"
         assert idle["display_name"] == "猫咪智能体"
-        assert idle["display_role"] == "项目执行智能体"
+        assert idle["display_role"] == "项目管理智能体"
 
 
 @pytest.mark.asyncio
@@ -335,8 +337,32 @@ async def test_agents_endpoint_includes_idle_projects(kernel, adapter):
         assert f"proj:{project.id}" in ids
         idle = next(a for a in data if a["id"] == f"proj:{project.id}")
         assert idle["status"] == "idle"
-        assert idle["type"] == "student"
+        assert idle["type"] == "project_manager"
         assert idle["label"] == "Dormant Project"
+        assert idle["project_id"] == project.id
+
+
+@pytest.mark.asyncio
+async def test_agents_endpoint_includes_project_students(kernel, adapter):
+    now = datetime.now(tz=timezone.utc)
+    project = Project(
+        id="demo-proj-students",
+        name="Student Project",
+        created_at=now,
+        updated_at=now,
+        student_agents=[StudentAgentConfig(id="researcher", label="Researcher")],
+    )
+    kernel.project_store.list_projects.return_value = [project]
+
+    app = _make_app(kernel, adapter)
+    async with TestClient(TestServer(app)) as client:
+        resp = await client.get("/api/agents")
+        assert resp.status == 200
+        data = await resp.json()
+        student = next(a for a in data if a["id"] == f"student:{project.id}:researcher")
+        assert student["type"] == "project_student"
+        assert student["chat_enabled"] is False
+        assert student["project_id"] == project.id
 
 
 @pytest.mark.asyncio
@@ -1173,6 +1199,7 @@ async def test_publish_to_hub_endpoint_requires_active_project(kernel, adapter):
 
 @pytest.mark.asyncio
 async def test_config_get_endpoint(kernel, adapter):
+    kernel.config.providers[kernel.config.active_provider].reasoning_effort = "medium"
     app = _make_app(kernel, adapter)
     async with TestClient(TestServer(app)) as client:
         resp = await client.get("/api/config")
@@ -1182,6 +1209,7 @@ async def test_config_get_endpoint(kernel, adapter):
             kernel.config.active_provider_config.model
         )
         assert data["active_provider"] == kernel.config.active_provider
+        assert data["providers"][kernel.config.active_provider]["reasoning_effort"] == "medium"
         assert data["agent"]["max_iterations"] == kernel.config.agent.max_iterations
         assert data["daemon"]["web_in_docker"] is False
 
@@ -1191,6 +1219,7 @@ async def test_config_put_endpoint_persists(kernel, adapter):
     app = _make_app(kernel, adapter)
     payload = kernel.config.model_dump(by_alias=True)
     payload["providers"][payload["active_provider"]]["model"] = "openai/gpt-4.1-mini"
+    payload["providers"][payload["active_provider"]]["reasoning_effort"] = "high"
     payload["daemon"]["verbose_chat"] = False
     payload["daemon"]["show_tool_calls"] = False
     payload["daemon"]["web_in_docker"] = True
@@ -1203,7 +1232,11 @@ async def test_config_put_endpoint_persists(kernel, adapter):
         assert data["config"]["providers"][data["config"]["active_provider"]]["model"] == (
             "openai/gpt-4.1-mini"
         )
+        assert data["config"]["providers"][data["config"]["active_provider"]]["reasoning_effort"] == (
+            "high"
+        )
         assert kernel.config.active_provider_config.model == "openai/gpt-4.1-mini"
+        assert kernel.config.active_provider_config.reasoning_effort == "high"
         assert kernel.config.daemon.verbose_chat is False
         assert kernel.config.daemon.show_tool_calls is False
         assert kernel.config.daemon.web_in_docker is True
@@ -1211,6 +1244,7 @@ async def test_config_put_endpoint_persists(kernel, adapter):
     config_path = kernel.config.data_path / "config.json"
     loaded = load_config(config_path)
     assert loaded.active_provider_config.model == "openai/gpt-4.1-mini"
+    assert loaded.active_provider_config.reasoning_effort == "high"
     assert loaded.daemon.verbose_chat is False
     assert loaded.daemon.show_tool_calls is False
     assert loaded.daemon.web_in_docker is True

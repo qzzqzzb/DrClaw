@@ -49,6 +49,7 @@ class LiteLLMProvider(LLMProvider):
         self._model = config.model
         self._api_key = config.api_key or None
         self._api_base = config.api_base
+        self._reasoning_effort = config.reasoning_effort
         self._max_tokens = max_tokens
         self._temperature = temperature
 
@@ -68,12 +69,15 @@ class LiteLLMProvider(LLMProvider):
             "model": self._model,
             "messages": all_messages,
             "max_tokens": self._max_tokens,
-            "temperature": self._temperature,
         }
+        if self._should_send_temperature():
+            kwargs["temperature"] = self._temperature
         if self._api_key:
             kwargs["api_key"] = self._api_key
         if self._api_base:
             kwargs["api_base"] = self._api_base
+        if self._reasoning_effort:
+            kwargs["reasoning_effort"] = self._reasoning_effort
         if tools:
             kwargs["tools"] = tools
 
@@ -174,6 +178,14 @@ class LiteLLMProvider(LLMProvider):
             or "/moonshot" in api_base
             or "moonshot.ai" in api_base
         )
+
+    def _should_send_temperature(self) -> bool:
+        model_name = self._model.lower().split("/")[-1]
+        if not model_name.startswith("gpt-5"):
+            return True
+        if model_name.startswith(("gpt-5.1", "gpt-5.2")):
+            return self._reasoning_effort in (None, "none")
+        return False
 
     @staticmethod
     def _message_field(message: Any, field: str) -> Any:

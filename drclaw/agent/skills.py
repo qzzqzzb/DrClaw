@@ -24,15 +24,18 @@ class SkillsLoader:
         self,
         workspace: Path,
         global_skills_dir: Path | None = None,
+        extra_skill_dirs: list[tuple[str, Path]] | None = None,
         env_provider: Callable[[], Mapping[str, str]] | None = None,
     ) -> None:
         self.workspace = workspace
         self.global_skills_dir = global_skills_dir
+        self.extra_skill_dirs = list(extra_skill_dirs or [])
         self._env_provider = env_provider
 
     def _get_skill_dirs(self) -> list[tuple[str, Path]]:
         """Return (source_label, path) for each existing skill tier directory."""
         candidates = [
+            *self.extra_skill_dirs,
             ("workspace", self.workspace / "skills"),
             ("global", self.global_skills_dir),
         ]
