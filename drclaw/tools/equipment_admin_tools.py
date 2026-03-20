@@ -36,6 +36,23 @@ def _project_not_found_message(store: ProjectStore, project_id: str) -> str:
     return f"Error: project {project_id!r} not found. No projects exist yet."
 
 
+def _project_student_not_found_message(
+    store: ProjectStore,
+    project_id: str,
+    student_id: str,
+) -> str:
+    project = store.get_project(project_id)
+    if project is None:
+        return _project_not_found_message(store, project_id)
+    available = [student.id for student in project.student_agents]
+    if available:
+        return (
+            f"Error: student {student_id!r} not found in project {project_id!r}. "
+            f"Available: {', '.join(available)}"
+        )
+    return f"Error: project {project_id!r} has no configured student agents."
+
+
 def _dedupe_normalized_skill_refs(
     refs: list[str], normalize_ref: Callable[[str], str],
 ) -> tuple[list[str], str | None]:
@@ -637,6 +654,142 @@ class AddLocalHubSkillsToProjectTool(Tool):
 
         return (
             f"Added {len(copied)} local hub skill(s) to project {project.id!r}: "
+            + ", ".join(copied)
+        )
+
+
+class AddLocalHubSkillsToProjectStudentTool(Tool):
+    """Copy local-hub skills into one project's student-private skills directory."""
+
+    def __init__(
+        self,
+        project_store: ProjectStore,
+        projects_dir: Path,
+        local_skill_hub: LocalSkillHubStore,
+    ) -> None:
+        self._project_store = project_store
+        self._projects_dir = projects_dir
+        self._local_skill_hub = local_skill_hub
+
+    @property
+    def name(self) -> str:
+        return "add_local_hub_skills_to_project_student"
+
+    @property
+    def description(self) -> str:
+        return (
+            "Copy local hub skills into "
+            "~/.drclaw/projects/<project_id>/agents/<student_id>/skills so only that "
+            "project student agent gets the private skill override."
+        )
+
+    @property
+    def parameters(self) -> dict[str, Any]:
+        return {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string",
+                    "description": "Target project id for the student agent.",
+                },
+                "student_id": {
+                    "type": "string",
+                    "description": "Target student id inside the project.",
+                },
+                "skill_names": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "One or more local hub skill refs to copy. Supports category paths, "
+                        "e.g. search/arxiv-reader."
+                    ),
+                },
+                "overwrite": {
+                    "type": "boolean",
+                    "description": "Replace existing student-private skill directories on conflict.",
+                },
+            },
+            "required": ["project_id", "student_id", "skill_names"],
+        }
+
+    async def execute(self, params: dict[str, Any]) -> str:
+        project_id: str = params["project_id"]
+        student_id: str = params["student_id"]
+        requested: list[str] = params["skill_names"]
+        overwrite: bool = params.get("overwrite", False)
+
+        if not requested:
+            return "Error: skill_names must include at least one item."
+
+        project = self._project_store.get_project(project_id)
+        if project is None:
+            return _project_not_found_message(self._project_store, project_id)
+        student = next((item for item in project.student_agents if item.id == student_id), None)
+        if student is None:
+            return _project_student_not_found_message(
+                self._project_store,
+                project_id,
+                student_id,
+            )
+
+        skill_refs, error = _dedupe_normalized_skill_refs(
+            requested, self._local_skill_hub.normalize_skill_ref
+        )
+        if error:
+            return error
+
+        hub_skills, error = _resolve_local_hub_skills(self._local_skill_hub, skill_refs)
+        if error:
+            return error
+
+        dest_by_ref: dict[str, str] = {}
+        by_name: dict[str, str] = {}
+        for skill in hub_skills:
+            destination_name = skill.name
+            existing_ref = by_name.get(destination_name)
+            if existing_ref is not None and existing_ref != skill.ref:
+                return (
+                    f"Error: local hub skills {existing_ref!r} and {skill.ref!r} both map to "
+                    f"student skill name {destination_name!r}. Rename one skill or copy "
+                    "them separately."
+                )
+            by_name[destination_name] = skill.ref
+            dest_by_ref[skill.ref] = destination_name
+
+        skills_dir = self._projects_dir / project.id / "agents" / student.id / "skills"
+        skills_dir.mkdir(parents=True, exist_ok=True)
+
+        conflicts = []
+        for skill in hub_skills:
+            destination_name = dest_by_ref[skill.ref]
+            if (skills_dir / destination_name).exists():
+                conflicts.append(destination_name)
+        if conflicts and not overwrite:
+            return (
+                "Error: student already has private skill directories: "
+                + ", ".join(sorted(set(conflicts)))
+                + ". Set overwrite=true to replace them."
+            )
+
+        copied: list[str] = []
+        for hub_skill in hub_skills:
+            destination_name = dest_by_ref[hub_skill.ref]
+            try:
+                _copy_skill_tree(
+                    hub_skill.root_dir,
+                    skills_dir / destination_name,
+                    overwrite=overwrite,
+                )
+            except Exception as exc:
+                return (
+                    f"Error: failed to copy skill {hub_skill.ref!r} into student "
+                    f"{student.id!r}: {exc}"
+                )
+            copied.append(f"{hub_skill.ref}->{destination_name}")
+
+        return (
+            f"Added {len(copied)} local hub skill(s) to student {student.id!r} "
+            f"in project {project.id!r}: "
             + ", ".join(copied)
         )
 

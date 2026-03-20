@@ -114,6 +114,26 @@ def test_list_all_sources(tmp_path: Path):
     assert sources == {"alpha": "workspace", "beta": "global"}
 
 
+def test_extra_skill_dirs_override_workspace_and_global(tmp_path: Path):
+    ws = tmp_path / "ws"
+    glob = tmp_path / "global"
+    private = tmp_path / "private"
+    _make_skill(ws / "skills", "alpha", "---\nname: alpha\n---\n# Workspace")
+    _make_skill(glob, "alpha", "---\nname: alpha\n---\n# Global")
+    _make_skill(private, "alpha", "---\nname: alpha\n---\n# Private")
+    _make_skill(private, "beta", "---\nname: beta\n---\n# Private beta")
+    loader = SkillsLoader(
+        ws,
+        global_skills_dir=glob,
+        extra_skill_dirs=[("student_private", private)],
+    )
+
+    skills = loader.list_skills()
+    sources = {s["name"]: s["source"] for s in skills}
+    assert sources == {"alpha": "student_private", "beta": "student_private"}
+    assert "# Private" in (loader.load_skill("alpha") or "")
+
+
 def test_within_tier_sorted_by_name(tmp_path: Path):
     glob = tmp_path / "global"
     _make_skill(glob, "zebra", "---\nname: zebra\n---\n# Z")

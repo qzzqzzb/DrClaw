@@ -80,6 +80,10 @@ def project_student_state_dir(project_dir: Path, student_id: str) -> Path:
     return project_dir / "agents" / student_id
 
 
+def project_student_skills_dir(project_dir: Path, student_id: str) -> Path:
+    return project_student_state_dir(project_dir, student_id) / "skills"
+
+
 def _build_acpx_guidance(
     config: DrClawConfig,
     workspace_dir: Path,
@@ -276,9 +280,15 @@ class _ProjectScopedAgent:
         def env_provider() -> dict[str, str]:
             return self.env_store.get_effective_env(agent_id)
 
+        extra_skill_dirs: list[tuple[str, Path]] = []
+        student_skills_dir = self.state_dir / "skills"
+        if self.state_dir != self.project_dir:
+            extra_skill_dirs.append(("student_private", ensure_dir(student_skills_dir)))
+
         skills_loader = SkillsLoader(
             workspace=self.workspace_dir,
             global_skills_dir=config.data_path / "skills",
+            extra_skill_dirs=extra_skill_dirs,
             env_provider=env_provider,
         )
         context_builder = ContextBuilder(
@@ -289,10 +299,14 @@ class _ProjectScopedAgent:
         )
 
         tool_registry = ToolRegistry()
+        exec_allowed_dirs = [self.workspace_dir]
+        if self.state_dir != self.project_dir:
+            exec_allowed_dirs.append(self.state_dir)
         register_common_tools(
             tool_registry,
             workspace=self.workspace_dir,
             write_allowed_dir=self.workspace_dir,
+            exec_allowed_dirs=exec_allowed_dirs,
             web_search_api_key=config.tools.web.serper.api_key,
             web_search_max_results=config.tools.web.serper.max_results,
             web_search_endpoint=config.tools.web.serper.endpoint,

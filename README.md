@@ -518,8 +518,13 @@ docker run -p 127.0.0.1:8080:8080 ...
 
 - `proj:<project_id>` 是项目对外唯一的 manager agent，负责接收 `main agent` 的项目级任务
 - `student:<project_id>:<student_id>` 是项目内部 student agent，当前主要由 project manager 调度，不接受 `main agent` 直接下发任务
+- `main agent` 现在可以管理 student lifecycle：列出、创建、更新、启用/禁用、删除某个 project 下的 students
 - 同一 project 下的 students 共享 `projects/<project_id>/workspace`
 - manager 和每个 student 都有独立的 `MEMORY.md`、`HISTORY.md`、session history 和 SOUL / 配置目录
+- 每个 student 还有独立的私有目录 `projects/<project_id>/agents/<student_id>/`，用于保存 memory/history/session/private skills
+- student 的 shell 可执行根目录现在包含 `project workspace + student private workspace`
+- `main agent` 现在可以把 local-hub skill 单独安装到某个 student 的私有 `skills/` 目录，不影响 manager 或其他 students
+- student 的 skill 加载顺序为：`student private skills > project workspace skills > global skills`
 - `/api/agents` 和 daemon 运行时已经能区分 `project_manager` 与 `project_student`
 - daemon 在 `--debug` / `--debug-full` 下会输出 student agent 的执行摘要，并在 debug jsonl 中记录 `agent_id`
 

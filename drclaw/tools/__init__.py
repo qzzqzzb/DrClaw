@@ -5,6 +5,7 @@ from drclaw.tools.cron import CronTool
 from drclaw.tools.equipment_admin_tools import (
     AddEquipmentTool,
     AddLocalHubSkillsToProjectTool,
+    AddLocalHubSkillsToProjectStudentTool,
     ListEquipmentsTool,
     RemoveEquipmentTool,
 )
@@ -35,6 +36,7 @@ __all__ = [
     "MessageTool",
     "AddEquipmentTool",
     "AddLocalHubSkillsToProjectTool",
+    "AddLocalHubSkillsToProjectStudentTool",
     "ListEquipmentsTool",
     "RemoveEquipmentTool",
     "RouteToProjectTool",
