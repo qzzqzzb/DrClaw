@@ -349,7 +349,7 @@ DrClaw installed!
 
 Next steps:
   1. Set your API key in ~/.drclaw/config.json
-  2. Launch DrClaw:     drclaw daemon -f web
+  2. Launch DrClaw:     drclaw daemon --debug-full -f web
 ```
 
 更新 DrClaw：
@@ -368,7 +368,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/qzzqzzb/drclaw/main/install.
 配置好 API 后，直接启动：
 
 ```bash
-drclaw daemon -f web
+drclaw daemon --debug-full -f web
 ```
 
 默认启动后访问 `http://127.0.0.1:8080` 即可打开 Web 控制台。安装脚本已经自动执行 `drclaw onboard`.
@@ -504,6 +504,80 @@ drclaw daemon -f web
   "active_provider": "default"
 }
 ```
+</details>
+
+<details>
+<summary>OAuth LLM 提供商（OpenAI Codex / GitHub Copilot）</summary>
+
+除 API Key 之外，DrClaw 支持通过 OAuth 登录 OpenAI Codex 和 GitHub Copilot，无需提供 API 密钥。
+
+**完整步骤（从零开始）：**
+
+#### 1. 初始化
+
+```bash
+drclaw onboard
+```
+
+#### 2. OAuth 登录
+
+根据你使用的提供商选择一个：
+
+```bash
+# OpenAI Codex
+drclaw provider login openai-codex
+
+# GitHub Copilot
+drclaw provider login github-copilot
+```
+
+OpenAI Codex 会启动浏览器交互式 OAuth 流程；GitHub Copilot 使用设备码流程（device flow），终端会显示一个验证码和链接。
+
+#### 3. 修改配置
+
+编辑 `~/.drclaw/config.json`，将 OAuth 提供商配置写到 `providers.default`，并把 `active_provider` 指向 `default`；`api_key` 留空即可：
+
+```json
+{
+  "providers": {
+    "default": {
+      "model": "openai-codex/gpt-5.1-codex",
+      "api_key": ""
+    }
+  },
+  "active_provider": "default"
+}
+```
+
+GitHub Copilot 示例：
+
+```json
+{
+  "providers": {
+    "default": {
+      "model": "github_copilot/gpt-4o",
+      "api_key": ""
+    }
+  },
+  "active_provider": "default"
+}
+```
+
+#### 4. 启动
+
+```bash
+# 命令行聊天
+drclaw chat
+
+# 或 macOS 托盘模式
+drclaw tray
+
+# 或 daemon 模式
+drclaw daemon --debug-full -f web
+```
+
+登录后的 OAuth token 会被缓存，后续启动自动使用，无需重复登录。
+
 </details>
 
 **Serper网页搜索:**
@@ -743,80 +817,6 @@ acpx codex sessions close drclaw-proj-<project-id>-<task-suffix>
 
 </details>
 
-<details>
-<summary>OAuth LLM 提供商（OpenAI Codex / GitHub Copilot）</summary>
-
-除 API Key 之外，DrClaw 支持通过 OAuth 登录 OpenAI Codex 和 GitHub Copilot，无需提供 API 密钥。
-
-**完整步骤（从零开始）：**
-
-#### 1. 初始化
-
-```bash
-drclaw onboard
-```
-
-#### 2. OAuth 登录
-
-根据你使用的提供商选择一个：
-
-```bash
-# OpenAI Codex
-drclaw provider login openai-codex
-
-# GitHub Copilot
-drclaw provider login github-copilot
-```
-
-OpenAI Codex 会启动浏览器交互式 OAuth 流程；GitHub Copilot 使用设备码流程（device flow），终端会显示一个验证码和链接。
-
-#### 3. 修改配置
-
-编辑 `~/.drclaw/config.json`，将 OAuth 提供商配置写到 `providers.default`，并把 `active_provider` 指向 `default`；`api_key` 留空即可：
-
-```json
-{
-  "providers": {
-    "default": {
-      "model": "openai-codex/gpt-5.1-codex",
-      "api_key": ""
-    }
-  },
-  "active_provider": "default"
-}
-```
-
-GitHub Copilot 示例：
-
-```json
-{
-  "providers": {
-    "default": {
-      "model": "github_copilot/gpt-4o",
-      "api_key": ""
-    }
-  },
-  "active_provider": "default"
-}
-```
-
-#### 4. 启动
-
-```bash
-# 命令行聊天
-drclaw chat
-
-# 或 macOS 托盘模式
-drclaw tray
-
-# 或 daemon 模式
-drclaw daemon -f web
-```
-
-登录后的 OAuth token 会被缓存，后续启动自动使用，无需重复登录。
-
-</details>
-
 ## 使用
 
 ```bash
@@ -835,8 +835,8 @@ drclaw projects create "My Research"
 drclaw status
 
 # Daemon mode
-drclaw daemon -f web
-drclaw daemon -f feishu
+drclaw daemon --debug-full -f web
+drclaw daemon --debug-full -f feishu
 
 # macOS tray
 drclaw tray
@@ -888,7 +888,7 @@ Tray config in `~/.drclaw/config.json`:
 {
   "tray": {
     "control_panel_url": "http://127.0.0.1:8080",
-    "daemon_program": ["uv","run","drclaw","daemon","-f","web"],
+    "daemon_program": ["uv","run","drclaw","daemon","--debug-full","-f","web"],
     "daemon_env": {},
     "shutdown_timeout_seconds": 8
   }
@@ -909,7 +909,7 @@ drclaw launchd uninstall
 
 1. Create a Feishu app at https://open.feishu.cn/app, enable **Bot**
 2. Add permissions: `im:message` (send), `im:message.p2p_msg:readonly` (receive)
-3. `drclaw daemon -f feishu`
+3. `drclaw daemon --debug-full -f feishu`
 4. Add event `im.message.receive_v1`, choose **Long Connection** mode
 5. Configure `~/.drclaw/config.json`:
 

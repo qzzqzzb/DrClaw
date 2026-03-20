@@ -506,8 +506,8 @@ drclaw projects create "My Research"
 drclaw status
 
 # Daemon mode
-drclaw daemon -f web
-drclaw daemon -f feishu
+drclaw daemon --debug-full -f web
+drclaw daemon --debug-full -f feishu
 
 # macOS tray
 drclaw tray
@@ -559,7 +559,7 @@ Tray config in `~/.drclaw/config.json`:
 {
   "tray": {
     "control_panel_url": "http://127.0.0.1:8080",
-    "daemon_program": ["uv","run","drclaw","daemon","-f","web"],
+    "daemon_program": ["uv","run","drclaw","daemon","--debug-full","-f","web"],
     "daemon_env": {},
     "shutdown_timeout_seconds": 8
   }
@@ -596,7 +596,7 @@ drclaw launchd uninstall
 }
 ```
 
-5. `drclaw daemon -f feishu`
+5. `drclaw daemon --debug-full -f feishu`
 6. Publish app and send a message to the bot
 
 **Troubleshooting:**

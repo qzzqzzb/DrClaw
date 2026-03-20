@@ -241,7 +241,7 @@ print_install_summary() {
     echo ""
     echo "${BOLD}Next steps:${RESET}"
     echo "  1. Set your API key in ${BOLD}$DRCLAW_DATA_DIR/config.json${RESET}"
-    echo "  2. Launch DrClaw:     ${BOLD}drclaw daemon -f web${RESET}"
+    echo "  2. Launch DrClaw:     ${BOLD}drclaw daemon --debug-full -f web${RESET}"
     echo ""
 }
 
